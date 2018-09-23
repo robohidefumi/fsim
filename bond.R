@@ -1,14 +1,18 @@
 ### config(varied)
-current_fx <- 110
-ins_default <- 0.956
+current_fx <- 112.472
 ins_y_rate <- 0.0438
-ins_y_rate <- ins_y_rate * ins_default
 
 ### config(fixed)
-inv_sum <- 1230000
-ins_l_sum <- 11000000
-ins_sum <- 1000000
+inv_sum <- 1152633.95
+inv_sum <- inv_sum + 2000000/current_fx
+inv_sum <- inv_sum + (150000000/current_fx)
+
+ins_l_sum <- 11149000
 ins_l_rate <- 0.012
+
+ins_sum <- 1000000
+ins_default <- 0.956
+ins_sum <- ins_sum * ins_default
 c_rate <- 0.0025
 
 ### ins settings
@@ -17,11 +21,13 @@ ins_loan <- (ins_l_rate * ins_l_sum) / current_fx
 ins_net <- ins_yield - ins_loan
 
 ### define function
+#### Including capital gain/loss
 func_r_yield <- function(c,d,p){
   duration = length(seq(Sys.Date(), as.Date(d), "month"))-1
   (((100 - p)/duration)*12) + c/p *100
 }
 
+#### Excluding capital gain/loss
 func_yield <- function(c,p){
   c/p * 100
 }
@@ -51,7 +57,7 @@ pl <- apply(bond_df2[,5:7], 1, function(x){
  x[1] * (x[2]/100) 
 }
 )
-
+  
 cf <- apply(bond_df2[,5:7], 1, function(x){
   x[1] * (x[3]/100) 
 }
