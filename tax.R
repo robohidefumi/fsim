@@ -46,7 +46,24 @@ df_inheritance <- cbind(df_inheritance,f_living=fumi_l)
 df_inheritance <- cbind(df_inheritance,m_living=michi_l)
 ##保険所有権設定
 df_inheritance[,"ins_owner"] <- c(rep("f",11),rep("m",35))
+##投資分贈与設定
+#df_master: マスターのデータフレーム
+#df_args: 設定用データフレーム
+df_args <- data.frame(
+  year = c(2030,2044),
+  donate = c(0.5,2)
+)
+m_donate <- function(df_master,df_args){
+  l <- length(df_args$year)
+  df_master[,"inv_donate"] <- rep(0,l)
+  for(i in 1:length(df_args$year)){
+    position <- df_args[i,"year"] - 2019 + 1
+    df_master[position,"inv_donate"] <- df_args[i,"donate"]
+  }
+  df_master
+}
 
+#### 海外居住による税率設定
 df_inheritance <- df_inheritance %>%
   mutate(f_inc_tax = case_when(
     f_living == "j" ~ 0.2,
@@ -68,9 +85,10 @@ df_inheritance <- df_inheritance %>%
     m_living == "s" ~ TRUE
   )
   )
+df_inheritance <- m_donate(df_inheritance,df_args)
 
-yield <- 0.06
-ini <- 2.5
+yield <- 0.06 # 利回り設定
+ini <- 2.5 #初期資金
 
 func_yield <- function(df,yield){
   for(i in 1:length(y)){
@@ -78,15 +96,23 @@ func_yield <- function(df,yield){
     year <- df[i,"year"]
     if(year == 2019){
       df[i,"begin"] <- ini
+      df[i,"m_begin"] <- 0
     }else{
       df[i,"begin"] <- df[i-1,"last"]
+      df[i,"m_begin"] <- df[i-1,"m_last"] + df[i-1,"inv_donate"]
     }
     df[i,"gross"] <- df[i,"begin"] * yield
+    df[i,"m_gross"] <- df[i,"m_begin"] * yield
     df[i,"net"] <- 
       df[i,"gross"] * 
-      (1 - df[i,"gross"] * df[i,"f_inc_tax"])
+      (1 - coupon_share * df[i,"f_inc_tax"])
+    df[i,"m_net"] <- 
+      df[i,"m_gross"] * 
+      (1 - coupon_share * df[i,"m_inc_tax"])
     df[i,"last"] <- 
-      df[i,"net"] +  df[i,"begin"]
+      df[i,"net"] +  df[i,"begin"] - df[i,"inv_donate"]
+    df[i,"m_last"] <-
+      df[i,"m_net"] +  df[i,"m_begin"]
     ### 保険贈与フラグ設定
     df[i,"ins_donate_flg"] <- FALSE
     if(i > 1){
@@ -124,7 +150,9 @@ func_yield <- function(df,yield){
     #### 受贈者手取算定
     df[i,"inv_inh"] <- df[i,"last"] * (1 - df[i,"inv_inh_tax"])
     df[i,"ins_inh"] <- ins * (1 - df[i,"ins_inh_tax"])
-    #### 保険算定
+    #### 投資贈与税算定
+    df[i,"inv_don_tax"] = df[i,"inv_donate"] * df[i,"inv_inh_tax"]
+    #### 保険贈与税算定
     if(i==1){df[i,"ins_csv"] <- ins_day1}
     else{df[i,"ins_csv"] <- df[i-1,"ins_csv"] * (1 + ins_yield)}
     if(df[i,"ins_donate_flg"] == TRUE){
@@ -134,7 +162,8 @@ func_yield <- function(df,yield){
     }
     #### 保険贈与税減算処理
     df[i,"inh_ttl"] <- 
-      sum(df[i,"inv_inh"],df[i,"ins_inh"]) - df[i,"ins_don_tax"]
+      sum(df[i,"inv_inh"],df[i,"ins_inh"],df[i,"m_last"])
+      - df[i,"ins_don_tax"] - df[i,"inv_don_tax"]
   }
   df
 }
