@@ -15,6 +15,10 @@ michi_a <- y - m
 
 #投資設定
 coupon_share <- 0.7 #利回りのうち利息収入の割合
+#生命保険受け取り
+ins_day1 <- 0.95
+ins_yield <- 0.0438
+ins <- 5.1
 
 df_inheritance <- data.frame(
   year = y,
@@ -40,6 +44,8 @@ michi_l <- c(rep("s",12),rep("j",34))
 #rep("s",46)
 df_inheritance <- cbind(df_inheritance,f_living=fumi_l)
 df_inheritance <- cbind(df_inheritance,m_living=michi_l)
+##保険所有権設定
+df_inheritance[,"ins_owner"] <- c(rep("f",11),rep("m",35))
 
 df_inheritance <- df_inheritance %>%
   mutate(f_inc_tax = case_when(
@@ -81,6 +87,13 @@ func_yield <- function(df,yield){
       (1 - df[i,"gross"] * df[i,"f_inc_tax"])
     df[i,"last"] <- 
       df[i,"net"] +  df[i,"begin"]
+    ### 保険贈与フラグ設定
+    df[i,"ins_donate_flg"] <- FALSE
+    if(i > 1){
+      if(df[i-1,"ins_owner"] == "f" & df[i,"ins_owner"] == "m"){
+        df[i,"ins_donate_flg"] <- TRUE
+      }
+    }
     ### 相続・贈与税チェック
     if(i > 10){
       j <- i-10
@@ -88,64 +101,43 @@ func_yield <- function(df,yield){
       f_validity <- sum(df[j:k,"f_live_flg"])
       m_validity <- sum(df[j:k,"m_live_flg"])
     }else{
-      f_validity <- FALSE
-      m_validity <- FALSE
+      f_validity <- 0
+      m_validity <- 0
     }
-    if((f_validity >= 10 & m_validity >= 10)
-       & (df[i,"f_living"] == "s" & df[i,"m_living"] == "s")){
-      df[i,"inh_tax"] <- 0
+    if(f_validity >= 10 & m_validity >= 10){
+      df[i,"validity"] <- TRUE
     }else{
-      df[i,"inh_tax"] <- 0.55
+      df[i,"validity"] <- FALSE
     }
-    df[i,"inv_inh"] <- df[i,"last"] * (1 - df[i,"inh_tax"])
+    if((df[i,"validity"] == TRUE)
+       &(df[i,"f_living"] == "s" & df[i,"m_living"] == "s")){
+      df[i,"inv_inh_tax"] <- 0
+      df[i,"ins_inh_tax"] <- 0
+    }else{
+      df[i,"inv_inh_tax"] <- 0.55
+      if(df[i,"ins_owner"] == "m"){
+        df[i,"ins_inh_tax"] <- 0.55/2
+      }else{
+        df[i,"ins_inh_tax"] <- 0.55
+      }
+    }
+    #### 受贈者手取算定
+    df[i,"inv_inh"] <- df[i,"last"] * (1 - df[i,"inv_inh_tax"])
+    df[i,"ins_inh"] <- ins * (1 - df[i,"ins_inh_tax"])
+    #### 保険算定
+    if(i==1){df[i,"ins_csv"] <- ins_day1}
+    else{df[i,"ins_csv"] <- df[i-1,"ins_csv"] * (1 + ins_yield)}
+    if(df[i,"ins_donate_flg"] == TRUE){
+      df[i,"ins_don_tax"] <- df[i,"ins_csv"] * df[i,"ins_inh_tax"]
+    }else{
+      df[i,"ins_don_tax"] <- 0
+    }
+    #### 保険贈与税減算処理
+    df[i,"inh_ttl"] <- 
+      sum(df[i,"inv_inh"],df[i,"ins_inh"]) - df[i,"ins_don_tax"]
   }
   df
 }
 
 df_inheritance <- func_yield(df_inheritance,yield)
-
-
-duration <- 45
-yield_s <- c(0.04,0.06,0.08)
-cf_r <- 0.7
-ins <- 5.1
-spend <- 5 + 1
-
-jp <- lapply(yield_s,function(x){
-  y <- x*cf_r*0.8 + x*(1 - cf_r)
-  t <- ttl * (1+y)^duration
-  income <- t * 0.45 + ins * 0.45 - spend
-})
-
-jp_m <- list.cbind(jp)
-
-h_allocation <- 1.5
-sgjp <- lapply(yield_s,function(x){
-  t <- ttl * (1+x)^10
-  t <- t - h_allocation
-  y <- x*cf_r*0.8 + x*(1 - cf_r)
-  t <- t*(1+y)^(duration - 10 )
-  t_h <- h_allocation*(1+y)^(duration - 10 )
-  t * 0.45 + t_h + ins * 0.725  - spend
-})
-sgjp_m <-  list.cbind(sgjp)
-
-sg <- lapply(yield_s,function(x){
-  t <- ttl * (1+x)^duration
-  t + ins  - spend
-})
-sg_m <- list.cbind(sg)
-
-all_m <- rbind(jp_m,sgjp_m,sg_m)
-all_m <- apply(all_m,c(1,2),function(x){round(x,digits=1)} )
-all_m <- rbind(all_m, all_m[2,]  - all_m[1,])
-all_m <- rbind(all_m, all_m[3,]  - all_m[2,])
-all_m <- rbind(all_m, all_m[3,]  - all_m[1,])
-
-all_df <- data.frame(all_m)
-colnames(all_df) <- c("(i) 4%","(ii) 6%","(iii)8%")
-rownames(all_df) <- c("(a)Without 10 years overseas","(b)with 10 years","(c)double 10 years","(b)-(a)","(c)-(b)","(c)-(a)")
-ggplot(data=all_df, aes(x=dose, y=len, fill=supp)) +
-  geom_bar(stat="identity", position=position_dodge())
-
-all_df
+df_inheritance
