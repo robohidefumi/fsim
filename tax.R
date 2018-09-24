@@ -147,7 +147,8 @@ df_common <- data.frame(
 )
 
 ### 生活費試算
-expense <- c(rep(0,15),rep(0.15,10),rep(0.25,10),rep(0.45,11))
+expense <- c(rep(0,15),rep(0.15,10),rep(0.25,10),rep(0.35,11))
+#expense <- rep(0,46)
 df_common[,"expense"] <- expense
 
 ### Pattern A: 親子双方ずっと日本居住
@@ -160,23 +161,13 @@ df_a[,"ins_owner"] <- rep("f",46)
 ##投資贈与設定
 df_a[,"inv_donate"] <- rep(0,46)
 
-### Pattern B: 親はずっとSG居住、子はずっと日本居住
-fumi_l <- rep("s",46)
-michi_l <- rep("j",46)
+#パターンB: 親子ともに最初の12年のみSG,あとはずっとJP
+fumi_l <- c(rep("s",12),rep("j",34))
+michi_l <- c(rep("s",12),rep("j",34))
 df_b <- cbind(df_common,f_living=fumi_l)
 df_b <- cbind(df_b,m_living=michi_l)
 ##保険所有権設定
-df_b[,"ins_owner"] <- rep("f",46)
-##投資贈与設定
-df_b[,"inv_donate"] <- rep(0,46)
-
-#パターンC: 親子ともに最初の12年のみSG,あとはずっとJP
-fumi_l <- c(rep("s",12),rep("j",34))
-michi_l <- c(rep("s",12),rep("j",34))
-df_c <- cbind(df_common,f_living=fumi_l)
-df_c <- cbind(df_c,m_living=michi_l)
-##保険所有権設定
-df_c[,"ins_owner"] <- c(rep("f",11),rep("m",35))
+df_b[,"ins_owner"] <- c(rep("f",11),rep("m",35))
 ##投資分贈与設定
 #df_master: マスターのデータフレーム
 #df_args: 設定用データフレーム
@@ -184,7 +175,17 @@ df_args <- data.frame(
   year = c(2030),
   donate = c(0.5)
 )
-df_c <- m_donate(df_c,df_args)
+df_b <- m_donate(df_b,df_args)
+
+### Pattern C: 親はずっとSG居住、子はずっと日本居住
+fumi_l <- rep("s",46)
+michi_l <- rep("j",46)
+df_c <- cbind(df_common,f_living=fumi_l)
+df_c <- cbind(df_c,m_living=michi_l)
+##保険所有権設定
+df_c[,"ins_owner"] <- rep("f",46)
+##投資贈与設定
+df_c[,"inv_donate"] <- rep(0,46)
 
 #パターンD: 親はずっとSG、子は最初の12年のみSG,あとはずっとJP
 fumi_l <- rep("s",46)
@@ -216,31 +217,107 @@ df_args <- data.frame(
   year = c(2030,2054),
   donate = c(0.5,2)
 )
-df_e <- m_donate(df_d,df_args)
+df_e <- m_donate(df_e,df_args)
+
+#パターンF: 親はずっとSG、子もずっとSG
+fumi_l <- rep("s",46)
+michi_l <- rep("s",46)
+df_f <- cbind(df_common,f_living=fumi_l)
+df_f <- cbind(df_f,m_living=michi_l)
+##保険所有権設定
+df_f[,"ins_owner"] <- rep("f",46)
+##投資分贈与設定
+#df_master: マスターのデータフレーム
+#df_args: 設定用データフレーム
+df_f[,"inv_donate"] <- rep(0,46)
 
 #### メインルーチン
+p_v <- letters[1:6] #パターンリスト
+y_v <- c(0.04,0.06,0.08)
+
+df_ttl <- data_frame()
+for(i in 1:length(p_v)){
+  df <- eval(parse(text=paste("df_",p_v[i],sep='')))
+  df <- set_tax(df)
+  for(j in 1:length(y_v)){
+    func_yield(df,y_v[j])
+    df[,"yield"] <- y_v[j]
+  }
+  df[,"pattern"] <- p_v[i]
+  df_ttl <- rbind(df_ttl,df)
+}
+  
+
 df_a <- set_tax(df_a)
 df_a_4 <- func_yield(df_a,0.04)
+l_a_4 <- df_a_4[46,"inh_ttl"]
 df_a_6 <- func_yield(df_a,0.04)
+l_a_6 <- df_a_6[46,"inh_ttl"]
 df_a_8 <- func_yield(df_a,0.04)
+l_a_8 <- df_a_8[46,"inh_ttl"]
+write.csv(df_a_6,file="a_6.csv",row.names = FALSE)
 
 df_b <- set_tax(df_b)
 df_b_4 <- func_yield(df_b,0.04)
+l_b_4 <- df_b_4[46,"inh_ttl"]
 df_b_6 <- func_yield(df_b,0.06)
+l_b_6 <- df_b_6[46,"inh_ttl"]
 df_b_8 <- func_yield(df_b,0.08)
+l_b_8 <- df_b_8[46,"inh_ttl"]
+write.csv(df_b_6,file="b_6.csv",row.names = FALSE)
 
 df_c <- set_tax(df_c)
 df_c_4 <- func_yield(df_c,0.04)
+l_c_4 <- df_c_4[46,"inh_ttl"]
 df_c_6 <- func_yield(df_c,0.06)
+l_c_6 <- df_c_6[46,"inh_ttl"]
 df_c_8 <- func_yield(df_c,0.08)
+l_c_8 <- df_c_8[46,"inh_ttl"]
+write.csv(df_c_6,file="c_6.csv",row.names = FALSE)
 
 df_d <- set_tax(df_d)
 df_d_4 <- func_yield(df_d,0.04)
+l_d_4 <- df_d_4[46,"inh_ttl"]
 df_d_6 <- func_yield(df_d,0.06)
+l_d_6 <- df_d_6[46,"inh_ttl"]
 df_d_8 <- func_yield(df_d,0.08)
+l_d_8 <- df_d_8[46,"inh_ttl"]
+write.csv(df_d_6,file="d_6.csv",row.names = FALSE)
 
 df_e <- set_tax(df_e)
 df_e_4 <- func_yield(df_e,0.04)
+l_e_4 <- df_e_4[46,"inh_ttl"]
 df_e_6 <- func_yield(df_e,0.06)
+l_e_6 <- df_e_6[46,"inh_ttl"]
 df_e_8 <- func_yield(df_e,0.08)
+l_e_8 <- df_e_8[46,"inh_ttl"]
+write.csv(df_e_6,file="e_6.csv",row.names = FALSE)
+write.csv(df_e_4,file="e_4.csv",row.names = FALSE)
 
+df_f <- set_tax(df_f)
+df_f_4 <- func_yield(df_f,0.04)
+l_f_4 <- df_f_4[46,"inh_ttl"]
+df_f_6 <- func_yield(df_f,0.06)
+l_f_6 <- df_f_6[46,"inh_ttl"]
+df_f_8 <- func_yield(df_f,0.08)
+l_f_8 <- df_f_8[46,"inh_ttl"]
+write.csv(df_f_6,file="f_6.csv",row.names = FALSE)
+write.csv(df_f_4,file="f_4.csv",row.names = FALSE)
+
+summary_gg <- data.frame(
+  pattern = c("A","A","A","B","B","B","C","C","C","D","D","D","E","E","E","F","F","F"),
+  yield = c("4%","6%","8%","4%","6%","8%","4%","6%","8%","4%","6%","8%","4%","6%","8%","4%","6%","8%"),
+  left = c(l_a_4,l_a_6,l_a_8,l_b_4,l_b_6,l_b_8,l_c_4,l_c_6,l_c_8,l_d_4,l_d_6,l_d_8,l_e_4,l_e_6,l_e_8,l_f_4,l_f_6,l_f_8)
+)
+
+library(ggplot2)
+ggplot(summary_gg)
+ggplot(df_a_6,aes(year,inh_ttl)) +
+  geom_line()
+
+summary_table <- data.frame(
+  pattern = c("A","B","C","D","E","F"),
+  yield_4 = c(l_a_4,l_b_4,l_c_4,l_d_4,l_e_4,l_f_4),
+  yield_6 = c(l_a_6,l_b_6,l_c_6,l_d_6,l_e_6,l_f_6),
+  yield_8 = c(l_a_8,l_b_8,l_c_8,l_d_8,l_e_8,l_f_8)
+)
