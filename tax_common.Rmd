@@ -1,0 +1,109 @@
+## Outline
+- Total Inheritance in 2064
+- Difference of Total Inheritance in 2064 between patterns
+- Net Income in 2064
+- Difference of Income in 2064 between patterns
+- Inheritance and Income in 2064
+- Difference of Inheritance and Income in 2064 between patterns
+- Inheritance by year
+- Difference of Inheritance by year
+- Net Income by year
+- Difference of Net Income by year
+
+
+## Summary(1/3): Inheritance
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+
+kable(pivot_inh,caption="Inheritance")
+```
+
+## Summary(2/3): Net Asset
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+kable(pivot_last,caption="Net Asset")
+```
+
+## Summary(3/3): Income after donation
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+kable(pivot_net,caption="Income")
+```
+
+## Inheritance in 2064
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_inh_2064)
+```
+
+## Diff. of Inheritance
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_inh_2064_diff)
+```
+
+## Net Income in 2064
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_net_2064)
+```
+
+## Diff. of Net Income
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_net_2064_diff)
+```
+
+## Net Asset in 2064
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_last_2064)
+```
+
+## Diff. of Net Asset
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_last_2064_diff)
+```
+
+## Inheritance and Income in 2064
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_2064)
+```
+
+## Diff. Inheritance and Income in 2064
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_2064_diff)
+```
+
+## Inheritance and Asset in 2064
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_2064_b)
+```
+
+## Diff. Inheritance and Asset in 2064
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_2064_b_diff)
+```
+
+
+## Inheritance by year
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_inh)
+```
+
+## Difference of Inheritance by year
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_inh_diff)
+```
+
+## Net Income by year
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_net)
+```
+
+## Difference of Net Income by year
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_net_diff)
+```
+
+## Net Asset by year
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_last)
+```
+
+## Difference of Net Asset by year
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+plot(gg_last_diff)
+```

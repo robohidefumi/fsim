@@ -1,0 +1,23 @@
+---
+title: "Tax Simulation (Vol.1)"
+author: "Hidefumi Watanabe"
+date: "9/25/2018"
+output:
+  ioslides_presentation: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("tax_lib.R")
+```
+
+```{r, echo = FALSE, eval=TRUE, warning=FALSE,error=FALSE, message=FALSE,results='asis'}
+source("tax_func.R")
+source("tax_setting.R")
+source("tax.R")
+source("tax_plot.R")
+```
+
+```{r child="tax_common.Rmd"}
+```
+
