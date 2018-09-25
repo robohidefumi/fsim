@@ -147,7 +147,7 @@ df_common <- data.frame(
 )
 
 ### 生活費試算
-expense <- c(rep(0,15),rep(0.15,10),rep(0.25,10),rep(0.35,11))
+expense <- c(rep(0,35),rep(0.30,11))
 #expense <- rep(0,46)
 df_common[,"expense"] <- expense
 
@@ -239,14 +239,69 @@ df_ttl <- data_frame()
 for(i in 1:length(p_v)){
   df <- eval(parse(text=paste("df_",p_v[i],sep='')))
   df <- set_tax(df)
+  df_pattern <- data_frame()
   for(j in 1:length(y_v)){
-    func_yield(df,y_v[j])
-    df[,"yield"] <- y_v[j]
+    df_for <- func_yield(df,y_v[j])
+    df_for[,"yield"] <- y_v[j]
+    df_pattern <- rbind(df_pattern,df_for)
   }
-  df[,"pattern"] <- p_v[i]
-  df_ttl <- rbind(df_ttl,df)
+  df_pattern[,"pattern"] <- p_v[i]
+  df_ttl <- rbind(df_ttl,df_pattern)
 }
+
+df_left <- df_ttl %>%
+  filter(year==2064)
+
+library(tidyr)
+pivot_inh_ttl <- df_left %>%
+  select(pattern,yield,inh_ttl) %>%
+  tidyr::spread(yield,inh_ttl)
+pivot_net <- df_left %>%
+  select(pattern,yield,net) %>%
+  tidyr::spread(yield,net)
+
+df_diff_left_inh <- df_left %>%
+  select(pattern,yield,inh_ttl)
+
+for(i in 1:length(df_diff_left_inh$pattern)){
   
+}
+
+install.packages("tidyr")
+
+library(ggplot2)
+ggplot(df_left,aes(pattern,inh_ttl)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~yield) +
+  labs(title = "Total Net Inheritance Asset after Tax in 2046")
+
+ggplot(df_left,aes(pattern,net)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~yield) +
+  labs(title = "Total Net Income after Tax in 2046")
+
+ggplot(df_left,aes(inh_ttl,net)) +
+  geom_point(aes(colour = pattern)) +
+  facet_wrap(~yield,ncol=1) +
+  labs(title = "Inheritance and Income in 2046")
+
+ggplot(subset(df_left,yield == 0.06),aes(inh_ttl,net)) +
+  geom_point(aes(colour = pattern)) +
+#  facet_wrap(~yield,ncol=1) +
+  labs(title = "Inheritance and Income in 2046")
+
+ggplot(df_ttl,aes(m_age,inh_ttl)) +
+  geom_line() +
+  #geom_bar(stat = "identity") +
+  facet_grid(pattern~yield) +
+  labs(title = "Total Net Inheritance Asset after Tax")
+
+ggplot(df_ttl,aes(m_age,net)) +
+  geom_bar(stat = "identity") +
+  facet_grid(pattern~yield) +
+  labs(title = "Total Net Income after Tax")
+
+
 
 df_a <- set_tax(df_a)
 df_a_4 <- func_yield(df_a,0.04)
