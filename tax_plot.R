@@ -1,15 +1,57 @@
 ########## output
 library(tidyr)
-pivot_inh <- df_left %>%
-  select(pattern,yield,inh_r) %>%
-  tidyr::spread(yield,inh_r)
-pivot_net <- df_left %>%
-  select(pattern,yield,net_r) %>%
-  tidyr::spread(yield,net_r)
-pivot_last <- df_left %>%
-  select(pattern,yield,last_r) %>%
-  tidyr::spread(yield,last_r)
+library(dplyr)
 
+ana_mst <- list(
+  item = c('inh','net','last'),
+  common = c('pattern','yield'),
+  mst = list(
+    item = data.frame(
+      param = c("inh","net","last"),
+      name = c("Inheritance","Net Income","Net Asset")
+    ),
+    ext = data.frame(
+      param = c("r","diff"),
+      name = c("Amount","Difference")
+    )
+  )
+)
+
+### 2064だけじゃないバージョンを作る必要がある
+make_pivot <- function(item,ext_value,df){
+  item_ext <- paste(item,ext_value,sep='_')
+  select_v <- c(ana_mst$common,item_ext)
+  df %>%
+    filter(year == 2064) %>%
+    select(.,one_of(select_v)) %>%
+    tidyr::spread_(paste(ana_mst$common[2]),paste(item_ext))
+}
+
+mkslide_title <- function(item, ext){
+  
+  cat1 <- ana_mst$mst$ext %>%
+    filter(param == ext) %>%
+    select(name)
+  
+  cat2 <- ana_mst$mst$item %>%
+    filter(param == item) %>%
+    select(name)
+  
+  title <- paste("##",cat1$name,"of", cat2$name,"by",ana_mst$common[1],"&",ana_mst$common[2], sep=" ")
+  
+  return(title)
+}
+
+mkslide_pivot <- function(item,ext_value){
+  k <- make_pivot(item,ext_value,df_ttl)
+  title <- mkslide_title(item,ext_value)
+  return(list(title = title, table = k))
+}
+
+loop_grid <- expand.grid(x = ana_mst$item, y = ana_mst$mst$ext$param)
+x <- as.vector(loop_grid$x)
+y <- as.vector(loop_grid$y)
+slide_list <- map2(x,y,function(x,y) mkslide_pivot(paste0(x),paste0(y)))
 
 library(ggplot2)
 gg_inh_2064 <- ggplot(df_left,aes(pattern,inh_ttl)) +
@@ -17,10 +59,40 @@ gg_inh_2064 <- ggplot(df_left,aes(pattern,inh_ttl)) +
   facet_wrap(~yield) +
   labs(title = "Total Net Inheritance Asset after Tax in 2064")
 
+gg_inh_2064_4 <- ggplot(df_left %>% filter(yield == 0.04),aes(pattern,inh_ttl)) +
+  geom_bar(stat = "identity") +
+  #  facet_wrap(~yield) +
+  labs(title = "Total Net Inheritance Asset after Tax in 2064(0.04)")
+
+gg_inh_2064_6 <- ggplot(df_left %>% filter(yield == 0.06),aes(pattern,inh_ttl)) +
+  geom_bar(stat = "identity") +
+#  facet_wrap(~yield) +
+  labs(title = "Total Net Inheritance Asset after Tax in 2064(0.06)")
+
+gg_inh_2064_8 <- ggplot(df_left %>% filter(yield == 0.08),aes(pattern,inh_ttl)) +
+  geom_bar(stat = "identity") +
+  #  facet_wrap(~yield) +
+  labs(title = "Total Net Inheritance Asset after Tax in 2064(0.08)")
+
 gg_inh_2064_diff <- ggplot(df_diff_left,aes(pattern,inh_diff)) +
   geom_bar(stat = "identity") +
   facet_wrap(~yield) +
   labs(title = "Difference Inheritance Asset after Tax in 2064")
+
+gg_inh_2064_diff_4 <- ggplot(df_diff_left %>% filter(yield == 0.04),aes(pattern,inh_diff)) +
+  geom_bar(stat = "identity") +
+  #  facet_wrap(~yield) +
+  labs(title = "Diff Total Net Inheritance Asset after Tax in 2064(0.04)")
+
+gg_inh_2064_diff_6 <- ggplot(df_diff_left %>% filter(yield == 0.06),aes(pattern,inh_diff)) +
+  geom_bar(stat = "identity") +
+  #  facet_wrap(~yield) +
+  labs(title = "Diff Total Net Inheritance Asset after Tax in 2064(0.06)")
+
+gg_inh_2064_diff_8 <- ggplot(df_diff_left %>% filter(yield == 0.08),aes(pattern,inh_diff)) +
+  geom_bar(stat = "identity") +
+  #  facet_wrap(~yield) +
+  labs(title = "Diff Total Net Inheritance Asset after Tax in 2064(0.08)")
 
 gg_net_2064 <- ggplot(df_left,aes(pattern,net)) +
   geom_bar(stat = "identity") +

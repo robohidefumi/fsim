@@ -47,3 +47,15 @@ for(i in 1:k){
   df_diff[i,"last_diff"] <- df_diff[i,"last"] - df_diff[j,"last"]
 }
 
+k <- length(df_ttl$m_age)
+for(i in 1:k){
+  d <- 46*3
+  if(i %% d == 0){j <- d}else{j <- i %% d }
+  df_ttl[i,"inh_diff"] <- df_ttl[i,"inh_ttl"] - df_ttl[j,"inh_ttl"]
+  df_ttl[i,"net_diff"] <- df_ttl[i,"net"] - df_ttl[j,"net"]
+  df_ttl[i,"last_diff"] <- df_ttl[i,"last"] - df_ttl[j,"last"]
+}
+df_ttl <- df_ttl %>%
+  mutate(inh_r = round(inh_ttl,digits=1)) %>%
+  mutate(net_r = round(net,digits=1)) %>%
+  mutate(last_r = round(last,digits=1))
