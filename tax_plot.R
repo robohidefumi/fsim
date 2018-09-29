@@ -27,6 +27,16 @@ make_pivot <- function(item,ext_value,df){
     tidyr::spread_(paste(ana_mst$common[2]),paste(item_ext))
 }
 
+mkpivot2 <- function(item,ext_value,year_value,df){
+  item_ext <- paste(item,ext_value,sep='_')
+  select_v <- c(ana_mst$common,item_ext)
+  df %>%
+      filter(year == year_value) %>%
+      select(.,one_of(select_v)) %>%
+      tidyr::spread_(paste(ana_mst$common[2]),paste(item_ext))
+}
+#mkpivot2('inh','r',2020,df_ttl)
+
 mkslide_title <- function(item, ext){
   
   cat1 <- ana_mst$mst$ext %>%
@@ -42,16 +52,44 @@ mkslide_title <- function(item, ext){
   return(title)
 }
 
+mktitle2 <- function(item, ext, year){
+  
+  cat1 <- ana_mst$mst$ext %>%
+    filter(param == ext) %>%
+    select(name)
+  
+  cat2 <- ana_mst$mst$item %>%
+    filter(param == item) %>%
+    select(name)
+  year <- paste0("(",year,")")
+  title <- paste("##",cat1$name,"of", cat2$name,"by",ana_mst$common[1],"&",ana_mst$common[2],year, sep=" ")
+  
+  return(title)
+}
+
+
 mkslide_pivot <- function(item,ext_value){
   k <- make_pivot(item,ext_value,df_ttl)
   title <- mkslide_title(item,ext_value)
   return(list(title = title, table = k))
 }
 
+mkslide_pivot2 <- function(item,ext_value){
+  
+  x <- list()
+  for(i in c(0:45 + 2019)){
+    k <- mkpivot2(item,ext_value,i,df_ttl)
+    title <- mktitle2(item,ext_value,i)
+    x <- list.append(x,title = title,table = k )
+  }
+  return(x)
+}
+
 loop_grid <- expand.grid(x = ana_mst$item, y = ana_mst$mst$ext$param)
 x <- as.vector(loop_grid$x)
 y <- as.vector(loop_grid$y)
 slide_list <- map2(x,y,function(x,y) mkslide_pivot(paste0(x),paste0(y)))
+slide2_list <- map2(x,y,function(x,y) mkslide_pivot2(paste0(x),paste0(y)))
 
 library(ggplot2)
 gg_inh_2064 <- ggplot(df_left,aes(pattern,inh_ttl)) +
