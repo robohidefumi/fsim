@@ -128,6 +128,30 @@ mkplot_sys <- function(year_value,yield_value,item_x,item_y, df){
 }
 #mkplot_sys(2050,0.06,'inh_ttl','net',df_ttl)
 
+gg_inh <- ggplot(df_ttl,aes(m_age,inh_ttl)) +
+  #geom_line() +
+  geom_bar(stat = "identity") +
+  facet_grid(pattern~yield) +
+  labs(title = "Total Net Inheritance Asset after Tax")
+
+mkplot_tsb <- function(pattern_value,yield_value,item_x,item_y, df){
+  g <- ggplot(
+    df %>% filter(pattern == pattern_value & yield == yield_value),
+    aes_string(x=paste0(item_x),y=paste0(item_y))) +
+    geom_line()
+  return(g)
+}
+#mkplot_tsb('b',0.06,'m_age', 'inh_ttl',df_ttl)
+
+mkplot_tsb2 <- function(yield_value,item_x,item_y, df){
+  g <- ggplot(
+    df %>% filter(yield == yield_value),
+    aes_string(x=paste0(item_x),y=paste0(item_y))) +
+    geom_line(aes(colour = pattern))
+  return(g)
+}
+#mkplot_tsb2(0.06,'m_age', 'inh_ttl',df_ttl)
+
 mktitle_plot <- function(year_value,yield_value,item){
   
   subject <- ana_mst$mst_plot$item %>%
@@ -162,6 +186,19 @@ mktitle2_plot <- function(year_value,yield_value,item_x,item_y){
   return(title)
 }
 #mktitle2_plot(2050, 0.06,"inh_ttl","net")
+
+mktitle3_plot <- function(yield_value,item){
+  
+  subject <- ana_mst$mst_plot$item %>%
+    filter(param == item) %>%
+    select(name)
+  
+  title <- paste("##",subject$name,"by",ana_mst$common[1],"&","yeld","=",yield_value, sep=" ")
+  
+  return(title)
+}
+#mktitle3_plot(0.06,'inh_ttl')
+
 
 mkslide_plot <- function(item){
 
@@ -212,55 +249,11 @@ y <- c('net','net_diff')
 slide_plot2 <- map2(x,y, function(x,y) mkslide2_plots(paste0(x),paste0(y)))
 
 
-gg_2064 <- ggplot(df_left,aes(inh_ttl,net)) +
-  geom_point(aes(colour = pattern)) +
-  facet_wrap(~yield,ncol=1) +
-  labs(title = "Inheritance and Income in 2064")
-
-gg_2064_diff <- ggplot(df_diff_left,aes(inh_diff,net_diff)) +
-  geom_point(aes(colour = pattern)) +
-  facet_wrap(~yield,ncol=1) +
-  labs(title = "Difference of Inheritance and Income in 2064")
-
-gg_2064_b <- ggplot(df_left,aes(inh_ttl,last)) +
-  geom_point(aes(colour = pattern)) +
-  facet_wrap(~yield,ncol=1) +
-  labs(title = "Inheritance and Asset in 2064")
-
-gg_2064_b_diff <- ggplot(df_diff_left,aes(inh_diff,last_diff)) +
-  geom_point(aes(colour = pattern)) +
-  facet_wrap(~yield,ncol=1) +
-  labs(title = "Difference of Inheritance and Asset in 2064")
-
-
-gg_inh <- ggplot(df_ttl,aes(m_age,inh_ttl)) +
-  #geom_line() +
-  geom_bar(stat = "identity") +
-  facet_grid(pattern~yield) +
-  labs(title = "Total Net Inheritance Asset after Tax")
-
-gg_inh_diff <- ggplot(df_diff,aes(m_age,inh_diff)) +
-  #geom_line() +
-  geom_bar(stat = "identity") +
-  facet_grid(pattern~yield) +
-  labs(title = "Difference of Inheritance Asset after Tax")
-
-gg_net <- ggplot(df_ttl,aes(m_age,net)) +
-  geom_bar(stat = "identity") +
-  facet_grid(pattern~yield) +
-  labs(title = "Total Net Income after Tax")
-
-gg_net_diff <- ggplot(df_diff,aes(m_age,net_diff)) +
-  geom_bar(stat = "identity") +
-  facet_grid(pattern~yield) +
-  labs(title = "Difference of Income after Tax")
-
-gg_last <- ggplot(df_ttl,aes(m_age,last)) +
-  geom_bar(stat = "identity") +
-  facet_grid(pattern~yield) +
-  labs(title = "Total Net Income after Tax")
-
-gg_last_diff <- ggplot(df_diff,aes(m_age,last_diff)) +
-  geom_bar(stat = "identity") +
-  facet_grid(pattern~yield) +
-  labs(title = "Difference of Income after Tax")
+grid <- expand.grid( item = as.vector(ana_mst$mst_plot$item$param), yield=unique(df_ttl$yield) )
+x <- as.vector(grid$item)
+y <- as.vector(grid$yield)
+slide_plot3 <- map2(x,y, function(x,y){
+  k <- mkplot_tsb2(y,'m_age',x ,df_ttl)
+  title <- mktitle3_plot(y,x)
+  list(title = title,plot = k )
+})

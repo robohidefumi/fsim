@@ -1,0 +1,14 @@
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+
+seq_along(slide_plot3) %>% map(
+  function(x){
+    cat(slide_plot3[[x]]$title)
+    cat("\n\n")
+    g <- slide_plot3[[x]]$plot
+    print(g)
+    cat("\n\n")
+  }
+)
+
+```
+

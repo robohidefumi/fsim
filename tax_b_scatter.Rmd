@@ -1,0 +1,23 @@
+---
+title: "Tax Simulation (Scatter)"
+author: "Hidefumi Watanabe"
+date: "10/01/2018"
+output:
+  ioslides_presentation: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("tax_lib.R")
+```
+
+```{r, echo = FALSE, eval=TRUE, warning=FALSE,error=FALSE, message=FALSE,results='asis'}
+source("tax_func.R")
+source("tax_setting_b.R")
+source("tax.R")
+source("tax_plot.R")
+```
+
+```{r child="tax_r_scatter.Rmd"}
+```
+
