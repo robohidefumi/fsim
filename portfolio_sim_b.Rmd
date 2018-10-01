@@ -1,0 +1,22 @@
+---
+title: "Portofolio Simulation (Vol.1)"
+author: "Hidefumi Watanabe"
+date: "9/25/2018"
+output:
+  ioslides_presentation: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("portfolio_lib.R")
+```
+
+```{r, echo = FALSE, eval=TRUE, warning=FALSE,error=FALSE, message=FALSE,results='asis'}
+source("portfolio_sim_b.R")
+```
+
+##Summary
+```{r, echo = FALSE, eval=TRUE, warning=FALSE,error=FALSE, message=FALSE,results='asis'}
+kable(df_summary)
+```
+

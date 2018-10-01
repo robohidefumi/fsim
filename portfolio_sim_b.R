@@ -5,7 +5,7 @@ maintenance <- 0.0025
   
 ### read.csv
 setwd("~/pj/fsim/")
-df_p <- read.csv("portfolio_sim.csv")
+df_p <- read.csv("portfolio.csv")
 df_p <- df_p %>%
   mutate(yield = allocation * (coupon/100)) %>%
   mutate(amount = allocation * (price/100)) %>%
