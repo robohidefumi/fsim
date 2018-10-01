@@ -1,0 +1,15 @@
+```{r,  results = "asis", echo = FALSE, comment = NA, warning=FALSE,error=FALSE, message=FALSE}
+
+grid <- expand.grid(x=1:6,y=1,z=1:10)
+grid %>% pmap(
+  function(x,y,z){
+    cat(slide_plot1[[x]][[y]][[z]]$title)
+    cat("\n\n")
+    g <- slide_plot1[[x]][[y]][[z]]$plot
+    print(g)
+    cat("\n\n")
+  }
+)
+
+```
+
