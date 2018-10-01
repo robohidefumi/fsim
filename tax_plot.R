@@ -5,6 +5,8 @@ library(dplyr)
 ana_mst <- list(
   item = c('inh','net','last'),
   common = c('pattern','yield'),
+  year_list = c(0:45 + 2019), #変えたからね
+  year_by_5 = seq(2019,2064,by=5),
   mst = list(
     item = data.frame(
       param = c("inh","net","last"),
@@ -13,6 +15,13 @@ ana_mst <- list(
     ext = data.frame(
       param = c("r","diff"),
       name = c("Amount","Difference")
+    )
+  ),
+  mst_plot = list(
+    item = data.frame(
+      param = c("inh_ttl","net","last","inh_diff","net_diff","last_diff"),
+      name = c("Amount of Inheritance","Amount of Net Income","Amount of Net Asset",
+               "Difference of Inheritance","Difference of Net Income","Difference of Net Asset")
     )
   )
 )
@@ -61,8 +70,9 @@ mktitle2 <- function(item, ext, year){
   cat2 <- ana_mst$mst$item %>%
     filter(param == item) %>%
     select(name)
-  year <- paste0("(",year,")")
-  title <- paste("##",cat1$name,"of", cat2$name,"by",ana_mst$common[1],"&",ana_mst$common[2],year, sep=" ")
+  m_age <- year - 2009
+  m_age <- paste0("(",m_age,")")
+  title <- paste("##",cat1$name,"of", cat2$name,"by",ana_mst$common[1],"&",ana_mst$common[2],m_age, sep=" ")
   
   return(title)
 }
@@ -77,7 +87,7 @@ mkslide_pivot <- function(item,ext_value){
 mkslide_pivot2 <- function(item,ext_value){
   
   x <- list()
-  for(i in c(0:45 + 2019)){
+  for(i in ana_mst$year_by_5){
     k <- mkpivot2(item,ext_value,i,df_ttl)
     title <- mktitle2(item,ext_value,i)
     x <- list.append(x,title = title,table = k )
@@ -85,22 +95,76 @@ mkslide_pivot2 <- function(item,ext_value){
   return(x)
 }
 
-loop_grid <- expand.grid(x = ana_mst$item, y = ana_mst$mst$ext$param)
+loop_grid <- expand.grid(x = ana_mst$mst$item$param, y = ana_mst$mst$ext$param)
 x <- as.vector(loop_grid$x)
 y <- as.vector(loop_grid$y)
-slide_list <- map2(x,y,function(x,y) mkslide_pivot(paste0(x),paste0(y)))
+#slide_list <- map2(x,y,function(x,y) mkslide_pivot(paste0(x),paste0(y)))
 slide2_list <- map2(x,y,function(x,y) mkslide_pivot2(paste0(x),paste0(y)))
 
 library(ggplot2)
+
+mkplot_syb <- function(year_value,yield_value,item,df){
+  g <- ggplot(
+    df %>% filter(year == year_value & yield == yield_value),
+    aes_string(x=paste0(ana_mst$common[1]),y=paste0(item))) +
+    geom_bar(stat = "identity")
+  return(g)
+}
+#mkplot_syb(2050, 0.04, 'inh_ttl',df_ttl)
+
+mktitle_plot <- function(year_value,yield_value,item){
+  
+  subject <- ana_mst$mst_plot$item %>%
+    filter(param == item) %>%
+    select(name)
+  
+  yield_string <- paste0(ana_mst$common[2], "=" ,yield_value)
+  m_age <- year_value - 2009
+  m_age <- paste0("(",m_age,")")
+  title <- paste("##",subject$name,"by",ana_mst$common[1],"&",yield_string,m_age, sep=" ")
+  
+  return(title)
+}
+
+mkslide_plot <- function(item){
+
+  grid_list <- list()
+  grid_list <- unique(df_ttl$yield)  %>% map(function(x){
+    list(expand.grid( year = ana_mst$year_by_5, yield=x ))
+  })
+  
+  o <- list()
+  for(i in 1:length(grid_list)){
+    m <- grid_list[[i]][[1]]$year
+    n <- grid_list[[i]][[1]]$yield
+    x <- map2(m,n, function(m,n){
+      k <- mkplot_syb(m, n, item, df_ttl)
+      title <- mktitle_plot(m,n,item)
+      list(title = title,plot = k )
+    })
+    o <- list.append(o,x)
+  }
+  return(o)
+}
+
+slide_plot1 <- as.vector(ana_mst$mst_plot$item$param) %>% map(function(x) mkslide_plot(paste0(x)))
+
 gg_inh_2064 <- ggplot(df_left,aes(pattern,inh_ttl)) +
   geom_bar(stat = "identity") +
   facet_wrap(~yield) +
   labs(title = "Total Net Inheritance Asset after Tax in 2064")
 
-gg_inh_2064_4 <- ggplot(df_left %>% filter(yield == 0.04),aes(pattern,inh_ttl)) +
+gg_inh_2064_4 <- ggplot(df_left %>% filter(year == 2064 & yield == 0.04),
+                        aes(pattern,inh_ttl)) +
   geom_bar(stat = "identity") +
   #  facet_wrap(~yield) +
   labs(title = "Total Net Inheritance Asset after Tax in 2064(0.04)")
+
+gg_inh_2064_4 <- ggplot(df_ttl %>% filter(yield == 0.04),aes(pattern,inh_ttl)) +
+  geom_bar(stat = "identity") +
+  #  facet_wrap(~yield) +
+  labs(title = "Total Net Inheritance Asset after Tax in 2064(0.04)")
+
 
 gg_inh_2064_6 <- ggplot(df_left %>% filter(yield == 0.06),aes(pattern,inh_ttl)) +
   geom_bar(stat = "identity") +
