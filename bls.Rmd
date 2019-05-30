@@ -1,0 +1,423 @@
+---
+title: "PPI Summary"
+author: "Hidefumi Watanabe"
+date: "4/13/2019"
+output:
+  pdf_document: default
+  ioslides_presentation: default
+  beamer_presentation: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(blscrapeR)
+library(ggplot2)
+library(dplyr)
+setwd("~/pj/fsim")
+df_catalog <- read.delim("catalog.txt")
+df_fd <- bls_api(c("WPSFD4","WPUFD49116","WPUFD41","WPUFD42"),startyear = 2009, endyear = 2019,
+                 catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+df_ppi <- left_join(df_fd, df_catalog, by = "seriesID")
+df_goods <- bls_api(c("WPUFD41","WPUFD411","WPUFD412","WPUFD49104"),startyear = 2009, endyear = 2019,
+                 catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_goods_title <- left_join(df_goods, df_catalog, by = "seriesID")
+df_service <- bls_api(c("WPUFD42","WPUFD421","WPUFD422","WPUFD423"),startyear = 2009, endyear = 2019,
+                 catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_service_title <- left_join(df_service, df_catalog, by = "seriesID")
+df_im <- bls_api(c("WPUID61","WPUID62","WPUID63"),startyear = 2009, endyear = 2019,
+                      catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_im_title <- left_join(df_im, df_catalog, by = "seriesID")
+df_stage <- bls_api(c("WPUID54","WPUID53","WPUID52","WPUID51"),startyear = 2009, endyear = 2019,
+                 catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_stage_title <- left_join(df_stage, df_catalog, by = "seriesID")
+df_sp <- bls_api(c("WPSFD49207","WPSFD4131","WPU00000000","WPU03THRU15"),startyear = 2009, endyear = 2019,
+                    catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+df_sp_title <- left_join(df_sp, df_catalog, by = "seriesID")
+df_energy <- bls_api(c("WPU0571","WPU057303","WPU0561"),startyear = 2009, endyear = 2019,
+                 catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_energy_title <- left_join(df_energy, df_catalog, by = "seriesID")
+df_food <- bls_api(c("WPU0221","WPU029","WPU012"),startyear = 2009, endyear = 2019,
+                     catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_food_title <- left_join(df_food, df_catalog, by = "seriesID")
+df_material <- bls_api(c("WPU0638","WPU061","WPU081"),startyear = 2009, endyear = 2019,
+                   catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_material_title <- left_join(df_material, df_catalog, by = "seriesID")
+df_healthcare <- bls_api(c("WPU5111","WPU5121"),startyear = 2009, endyear = 2019,
+                       catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_healthcare_title <- left_join(df_healthcare, df_catalog, by = "seriesID")
+df_retail <- bls_api(c("WPU5811","WPU5831"),startyear = 2009, endyear = 2019,
+                         catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_retail_title <- left_join(df_retail, df_catalog, by = "seriesID")
+df_machine <- bls_api(c("WPU571101","WPU1017","WPU101211"),startyear = 2009, endyear = 2019,
+                     catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_machine_title <- left_join(df_machine, df_catalog, by = "seriesID")
+df_trans <- bls_api(c("WPU3022","WPU3012","WPU1411"),startyear = 2009, endyear = 2019,
+                      catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_trans_title <- left_join(df_trans, df_catalog, by = "seriesID")
+df_biz <- bls_api(c("WPU3911","WPU4011","WPU4511"),startyear = 2009, endyear = 2019,
+                    catalog = TRUE, Sys.getenv("BLS_KEY")) %>% dateCast()
+
+df_biz_title <- left_join(df_biz, df_catalog, by = "seriesID")
+```
+
+```{r, echo = FALSE, eval=TRUE, warning=FALSE,error=FALSE, message=FALSE,results='asis'}
+df_plot <- df_ppi %>% arrange(desc(date)) %>% head(3*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m")
+plot(gg)
+
+df_plot <- df_ppi %>% arrange(desc(date)) %>% head(6*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m")
+plot(gg)
+
+df_plot <- df_ppi %>% arrange(desc(date)) %>% head(12*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m")
+plot(gg)
+
+df_plot <- df_ppi %>% arrange(desc(date)) %>% head(36*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m")
+plot(gg)
+
+df_plot <- df_ppi %>% arrange(desc(date)) %>% head(60*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle(" Last 60 m")
+plot(gg)
+
+df_plot <- df_ppi %>% arrange(desc(date)) %>% head(120*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m")
+plot(gg)
+
+### df_goods_title
+df_plot <- df_goods_title %>% arrange(desc(date)) %>% head(3*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Goods")
+plot(gg)
+
+df_plot <- df_goods_title %>% arrange(desc(date)) %>% head(6*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Goods")
+plot(gg)
+
+df_plot <- df_goods_title %>% arrange(desc(date)) %>% head(12*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Goods")
+plot(gg)
+
+df_plot <- df_goods_title %>% arrange(desc(date)) %>% head(36*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Goods")
+plot(gg)
+
+df_plot <- df_goods_title %>% arrange(desc(date)) %>% head(60*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Goods")
+plot(gg)
+
+df_plot <- df_goods_title %>% arrange(desc(date)) %>% head(120*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Goods")
+plot(gg)
+
+### df_service_title
+df_plot <- df_service_title %>% arrange(desc(date)) %>% head(3*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Service")
+plot(gg)
+
+df_plot <- df_service_title %>% arrange(desc(date)) %>% head(6*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Service")
+plot(gg)
+
+df_plot <- df_service_title %>% arrange(desc(date)) %>% head(12*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m::Service")
+plot(gg)
+
+df_plot <- df_service_title %>% arrange(desc(date)) %>% head(36*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m::Service")
+plot(gg)
+
+df_plot <- df_service_title %>% arrange(desc(date)) %>% head(60*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m::Service")
+plot(gg)
+
+df_plot <- df_service_title %>% arrange(desc(date)) %>% head(120*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m: :Service")
+plot(gg)
+
+### df_im_title
+df_plot <- df_im_title %>% arrange(desc(date)) %>% head(3*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Intermediate")
+plot(gg)
+
+df_plot <- df_im_title %>% arrange(desc(date)) %>% head(6*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Intermediate")
+plot(gg)
+
+df_plot <- df_im_title %>% arrange(desc(date)) %>% head(12*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Intermediate")
+plot(gg)
+
+df_plot <- df_im_title %>% arrange(desc(date)) %>% head(36*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Intermediate")
+plot(gg)
+
+df_plot <- df_im_title %>% arrange(desc(date)) %>% head(60*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Intermediate")
+plot(gg)
+
+df_plot <- df_im_title %>% arrange(desc(date)) %>% head(120*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Intermediate")
+plot(gg)
+
+### df_stage_title
+df_plot <- df_stage_title %>% arrange(desc(date)) %>% head(3*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Stage")
+plot(gg)
+
+df_plot <- df_stage_title %>% arrange(desc(date)) %>% head(6*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Stage")
+plot(gg)
+
+df_plot <- df_stage_title %>% arrange(desc(date)) %>% head(12*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Stage")
+plot(gg)
+
+df_plot <- df_stage_title %>% arrange(desc(date)) %>% head(36*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Stage")
+plot(gg)
+
+df_plot <- df_stage_title %>% arrange(desc(date)) %>% head(60*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Stage")
+plot(gg)
+
+df_plot <- df_stage_title %>% arrange(desc(date)) %>% head(120*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Stage")
+plot(gg)
+
+### df_sp_title
+df_plot <- df_sp_title %>% arrange(desc(date)) %>% head(3*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Special")
+plot(gg)
+
+df_plot <- df_sp_title %>% arrange(desc(date)) %>% head(6*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Special")
+plot(gg)
+
+df_plot <- df_sp_title %>% arrange(desc(date)) %>% head(12*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Special")
+plot(gg)
+
+df_plot <- df_sp_title %>% arrange(desc(date)) %>% head(36*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Special")
+plot(gg)
+
+df_plot <- df_sp_title %>% arrange(desc(date)) %>% head(60*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Special")
+plot(gg)
+
+df_plot <- df_sp_title %>% arrange(desc(date)) %>% head(120*4)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Special")
+plot(gg)
+
+### df_energy_title
+df_plot <- df_energy_title %>% arrange(desc(date)) %>% head(3*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Energy")
+plot(gg)
+
+df_plot <- df_energy_title %>% arrange(desc(date)) %>% head(6*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Energy")
+plot(gg)
+
+df_plot <- df_energy_title %>% arrange(desc(date)) %>% head(12*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Energy")
+plot(gg)
+
+df_plot <- df_energy_title %>% arrange(desc(date)) %>% head(36*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Energy")
+plot(gg)
+
+df_plot <- df_energy_title %>% arrange(desc(date)) %>% head(60*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Energy")
+plot(gg)
+
+df_plot <- df_energy_title %>% arrange(desc(date)) %>% head(120*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Energy")
+plot(gg)
+
+### df_food_title
+df_plot <- df_food_title %>% arrange(desc(date)) %>% head(3*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Food")
+plot(gg)
+
+df_plot <- df_food_title %>% arrange(desc(date)) %>% head(6*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Food")
+plot(gg)
+
+df_plot <- df_food_title %>% arrange(desc(date)) %>% head(12*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Food")
+plot(gg)
+
+df_plot <- df_food_title %>% arrange(desc(date)) %>% head(36*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Food")
+plot(gg)
+
+df_plot <- df_food_title %>% arrange(desc(date)) %>% head(60*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Food")
+plot(gg)
+
+df_plot <- df_food_title %>% arrange(desc(date)) %>% head(120*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Food")
+plot(gg)
+
+### df_material_title
+df_plot <- df_material_title %>% arrange(desc(date)) %>% head(3*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Material")
+plot(gg)
+
+df_plot <- df_material_title %>% arrange(desc(date)) %>% head(6*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Material")
+plot(gg)
+
+df_plot <- df_material_title %>% arrange(desc(date)) %>% head(12*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Material")
+plot(gg)
+
+df_plot <- df_material_title %>% arrange(desc(date)) %>% head(36*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Material")
+plot(gg)
+
+df_plot <- df_material_title %>% arrange(desc(date)) %>% head(60*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Material")
+plot(gg)
+
+df_plot <- df_material_title %>% arrange(desc(date)) %>% head(120*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Material")
+plot(gg)
+
+### df_healthcare_title
+df_plot <- df_healthcare_title %>% arrange(desc(date)) %>% head(3*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Healthcare")
+plot(gg)
+
+df_plot <- df_healthcare_title %>% arrange(desc(date)) %>% head(6*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Healthcare")
+plot(gg)
+
+df_plot <- df_healthcare_title %>% arrange(desc(date)) %>% head(12*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Healthcare")
+plot(gg)
+
+df_plot <- df_healthcare_title %>% arrange(desc(date)) %>% head(36*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Healthcare")
+plot(gg)
+
+df_plot <- df_healthcare_title %>% arrange(desc(date)) %>% head(60*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Healthcare")
+plot(gg)
+
+df_plot <- df_healthcare_title %>% arrange(desc(date)) %>% head(120*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Healthcare")
+plot(gg)
+
+### df_retail_title
+df_plot <- df_retail_title %>% arrange(desc(date)) %>% head(3*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Retail")
+plot(gg)
+
+df_plot <- df_retail_title %>% arrange(desc(date)) %>% head(6*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Retail")
+plot(gg)
+
+df_plot <- df_retail_title %>% arrange(desc(date)) %>% head(12*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Retail")
+plot(gg)
+
+df_plot <- df_retail_title %>% arrange(desc(date)) %>% head(36*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Retail")
+plot(gg)
+
+df_plot <- df_retail_title %>% arrange(desc(date)) %>% head(60*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Retail")
+plot(gg)
+
+df_plot <- df_retail_title %>% arrange(desc(date)) %>% head(120*2)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Retail")
+plot(gg)
+
+### df_machine_title
+df_plot <- df_machine_title %>% arrange(desc(date)) %>% head(3*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Machine")
+plot(gg)
+
+df_plot <- df_machine_title %>% arrange(desc(date)) %>% head(6*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Machine")
+plot(gg)
+
+df_plot <- df_machine_title %>% arrange(desc(date)) %>% head(12*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Machine")
+plot(gg)
+
+df_plot <- df_machine_title %>% arrange(desc(date)) %>% head(36*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Machine")
+plot(gg)
+
+df_plot <- df_machine_title %>% arrange(desc(date)) %>% head(60*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Machine")
+plot(gg)
+
+df_plot <- df_machine_title %>% arrange(desc(date)) %>% head(120*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Machine")
+plot(gg)
+
+### df_trans_title
+df_plot <- df_trans_title %>% arrange(desc(date)) %>% head(3*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:Transportation")
+plot(gg)
+
+df_plot <- df_trans_title %>% arrange(desc(date)) %>% head(6*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:Transportation")
+plot(gg)
+
+df_plot <- df_trans_title %>% arrange(desc(date)) %>% head(12*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:Transportation")
+plot(gg)
+
+df_plot <- df_trans_title %>% arrange(desc(date)) %>% head(36*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:Transportation")
+plot(gg)
+
+df_plot <- df_trans_title %>% arrange(desc(date)) %>% head(60*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:Transportation")
+plot(gg)
+
+df_plot <- df_trans_title %>% arrange(desc(date)) %>% head(120*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Transportation")
+plot(gg)
+
+### df_biz_title
+df_plot <- df_biz_title %>% arrange(desc(date)) %>% head(3*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 3 m:B2B")
+plot(gg)
+
+df_plot <- df_biz_title %>% arrange(desc(date)) %>% head(6*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 6 m:B2B")
+plot(gg)
+
+df_plot <- df_biz_title %>% arrange(desc(date)) %>% head(12*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 12 m:B2B")
+plot(gg)
+
+df_plot <- df_biz_title %>% arrange(desc(date)) %>% head(36*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line() + ggtitle("Last 36 m:B2B")
+plot(gg)
+
+df_plot <- df_biz_title %>% arrange(desc(date)) %>% head(60*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 60 m:B2B")
+plot(gg)
+
+df_plot <- df_biz_title %>% arrange(desc(date)) %>% head(120*3)
+gg <- ggplot(df_plot, aes(x=date, y=value,colour=title)) + geom_line()+ggtitle("Last 120 m:Transportation")
+plot(gg)
+
+```

@@ -1,0 +1,243 @@
+---
+title: "Latest GDP Report"
+author: "Hidefumi Watanabe"
+date: "5/1/2019"
+output:
+  pdf_document: default
+  ioslides_presentation: default
+  beamer_presentation: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(zoo)
+library(ggplot2)
+library(dplyr)
+library(bea.R)
+
+beaKey <- "8D061272-ADA9-41F8-8A01-51A5AE6222D3"
+
+today <- Sys.Date()
+yyyy <- format(today, "%Y")
+end_yyyy <- as.numeric(yyyy)
+start_yyyy <- end_yyyy - 50
+
+beaSpecs <- list(
+  'UserID' = beaKey ,
+  'Method' = 'GetData',
+  'datasetname' = 'NIPA',
+  'TableName' = 'T10105',
+  'Frequency' = 'Q',
+  'Year' = paste(start_yyyy:end_yyyy,collapse = ","),
+  'ResultFormat' = 'json'
+);
+beaPayload <- beaGet(beaSpecs, asWide = FALSE);
+
+df_T10105_ttl <- beaPayload %>% filter(LineNumber == '1'| LineNumber == '2'| LineNumber == '7'| LineNumber == '15'| LineNumber == '22') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_ttl$qdate <- as.yearqtr(df_T10105_ttl$TimePeriod)
+
+df_T10105_pce <- beaPayload %>% filter( LineNumber == '2'| LineNumber == '3'| LineNumber == '6') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_pce$qdate <- as.yearqtr(df_T10105_pce$TimePeriod)
+
+df_T10105_goods <- beaPayload %>% filter( LineNumber == '3'| LineNumber == '4'| LineNumber == '5') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_goods$qdate <- as.yearqtr(df_T10105_goods$TimePeriod)
+
+df_T10105_gdi <- beaPayload %>% filter( LineNumber == '7'| LineNumber == '8'| LineNumber == '14') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_gdi$qdate <- as.yearqtr(df_T10105_gdi$TimePeriod)
+
+df_T10105_fi <- beaPayload %>% filter( LineNumber == '8'| LineNumber == '9'| LineNumber == '13') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_fi$qdate <- as.yearqtr(df_T10105_fi$TimePeriod)
+
+df_T10105_nr <- beaPayload %>% filter( LineNumber == '9'| LineNumber == '10'| LineNumber == '11'| LineNumber == '12') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_nr$qdate <- as.yearqtr(df_T10105_nr$TimePeriod)
+
+df_T10105_ie <- beaPayload %>% filter( LineNumber == '16'| LineNumber == '19') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_ie$qdate <- as.yearqtr(df_T10105_ie$TimePeriod)
+
+df_T10105_ex <- beaPayload %>% filter( LineNumber == '16'| LineNumber == '17'| LineNumber == '18') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_ex$qdate <- as.yearqtr(df_T10105_ex$TimePeriod)
+
+df_T10105_im <- beaPayload %>% filter( LineNumber == '19'| LineNumber == '20'| LineNumber == '21') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_im$qdate <- as.yearqtr(df_T10105_im$TimePeriod)
+
+df_T10105_gov <- beaPayload %>% filter( LineNumber == '22'| LineNumber == '23'| LineNumber == '26') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_gov$qdate <- as.yearqtr(df_T10105_gov$TimePeriod)
+
+df_T10105_fed <- beaPayload %>% filter( LineNumber == '23'| LineNumber == '24'| LineNumber == '25') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10105_fed$qdate <- as.yearqtr(df_T10105_fed$TimePeriod)
+
+beaSpecs <- list(
+  'UserID' = beaKey ,
+  'Method' = 'GetData',
+  'datasetname' = 'NIPA',
+  'TableName' = 'T10103',
+  'Frequency' = 'Q',
+  'Year' = paste(start_yyyy:end_yyyy,collapse = ","),
+  'ResultFormat' = 'json'
+);
+beaPayload <- beaGet(beaSpecs, asWide = FALSE);
+df_T10103_ttl <- beaPayload %>% filter(LineNumber == '1'| LineNumber == '2'| LineNumber == '7'| LineNumber == '15'| LineNumber == '22') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_ttl$qdate <- as.yearqtr(df_T10103_ttl$TimePeriod)
+
+df_T10103_pce <- beaPayload %>% filter( LineNumber == '2'| LineNumber == '3'| LineNumber == '6') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_pce$qdate <- as.yearqtr(df_T10103_pce$TimePeriod)
+
+df_T10103_goods <- beaPayload %>% filter( LineNumber == '3'| LineNumber == '4'| LineNumber == '5') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_goods$qdate <- as.yearqtr(df_T10103_goods$TimePeriod)
+
+df_T10103_gdi <- beaPayload %>% filter( LineNumber == '7'| LineNumber == '8'| LineNumber == '14') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_gdi$qdate <- as.yearqtr(df_T10103_gdi$TimePeriod)
+
+df_T10103_fi <- beaPayload %>% filter( LineNumber == '8'| LineNumber == '9'| LineNumber == '13')%>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_fi$qdate <- as.yearqtr(df_T10103_fi$TimePeriod)
+
+df_T10103_nr <- beaPayload %>% filter( LineNumber == '9'| LineNumber == '10'| LineNumber == '11'| LineNumber == '12')%>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_nr$qdate <- as.yearqtr(df_T10103_nr$TimePeriod)
+
+df_T10103_ie <- beaPayload %>% filter( LineNumber == '16'| LineNumber == '19') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_ie$qdate <- as.yearqtr(df_T10103_ie$TimePeriod)
+
+df_T10103_ex <- beaPayload %>% filter( LineNumber == '16'| LineNumber == '17'| LineNumber == '18') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_ex$qdate <- as.yearqtr(df_T10103_ex$TimePeriod)
+
+df_T10103_im <- beaPayload %>% filter( LineNumber == '19'| LineNumber == '20'| LineNumber == '21') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_im$qdate <- as.yearqtr(df_T10103_im$TimePeriod)
+
+df_T10103_gov <- beaPayload %>% filter( LineNumber == '22'| LineNumber == '23'| LineNumber == '26') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_gov$qdate <- as.yearqtr(df_T10103_gov$TimePeriod)
+
+df_T10103_fed <- beaPayload %>% filter( LineNumber == '23'| LineNumber == '24'| LineNumber == '25') %>% select(TableName,TimePeriod, LineDescription,DataValue)
+df_T10103_fed$qdate <- as.yearqtr(df_T10103_fed$TimePeriod)
+```
+
+```{r, echo = FALSE, eval=TRUE, warning=FALSE,error=FALSE, message=FALSE,results='asis'}
+
+gg <- ggplot(df_T10105_ttl, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("GDP Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+gg <- ggplot(df_T10105_pce, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("PCE Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+gg <- ggplot(df_T10105_goods, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Goods Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+gg <- ggplot(df_T10105_gdi, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("GDI Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+gg <- ggplot(df_T10105_fi, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Fixed Investment Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10105_nr, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Nonresidential Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10105_ie, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Exports/Imports Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10105_ex, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Exports Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10105_im, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Imports Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10105_gov, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Gov Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10105_fed, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Fed Quarterly - Real") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_ttl, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("GDP Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_pce, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("PCE Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_goods, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Goods Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_gdi, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("GDI Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_fi, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Fixed Investment Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_nr, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Nonresidential Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_ie, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Exports/Imports Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_ex, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Exports Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_im, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Imports Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_gov, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Gov Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+gg <- ggplot(df_T10103_fed, 
+             aes(x=qdate, 
+                 y=DataValue,
+                 colour=LineDescription)) + geom_line()　+ ggtitle("Fed Quarterly - Price Index") + theme(legend.position = "bottom") + theme(legend.direction = "vertical")
+plot(gg)
+
+```
