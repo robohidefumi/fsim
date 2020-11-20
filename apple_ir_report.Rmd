@@ -1,0 +1,1582 @@
+---
+title: "Apple IR Analysis"
+author: "Robo"
+date: "11/7/2020"
+output:
+  pdf_document: default
+  ioslides_presentation: default
+  beamer_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggrepel)
+
+source("ir_lib.R")
+
+apple <- read.csv("~/Downloads/apple_ir.csv")
+
+sales_product <- apple%>% 
+  filter(category == "Product") %>%
+  select(yyyy,item,value)
+
+sales_region <- apple%>% 
+  filter(category == "Region") %>%
+  select(yyyy,item,value)
+
+gm <- apple%>% 
+  filter(category == "GM") %>%
+  select(yyyy,item,value)
+
+gmp <- apple%>% 
+  filter(category == "GMP") %>%
+  select(yyyy,item,value)
+
+fc <- apple%>% 
+  filter((category == "PL") & (item == "Research and development" | item == "Selling, general and administrative")) %>%
+  select(yyyy,item,value)
+
+pl <- apple%>% 
+  filter(category == "PL") %>%
+  select(yyyy,item,value)
+pl_wide <- pivot_wider(
+  pl,
+  names_from = item,
+  values_from = value
+)
+
+pl_wide_new <- pl_wide %>%
+  mutate(rd_r = `Research and development`/`Total net sales`) %>%
+  mutate(sga_r = `Selling, general and administrative`/`Total net sales`) %>%
+  mutate(ni_r = `Net income`/`Total net sales`)
+
+pl_wide_new <- pl_wide_new %>%
+  arrange(yyyy) %>%
+  mutate(ni_yoy=`Net income`/lag(`Net income`,1)-1)
+
+pl_wide_new <- pl_wide_new %>%
+  arrange(yyyy) %>%
+  mutate(ns_yoy=`Total net sales`/lag(`Total net sales`,1)-1)
+
+fcp_wide <- pl_wide_new %>%
+  select(yyyy,rd_r,sga_r)
+
+fcp <- fcp_wide  %>%
+  pivot_longer(col = -yyyy, names_to = "item", values_to = "value")
+
+sales_income <- apple%>% 
+  filter((category == "PL") & (item == "Total net sales" | item == "Net income")) %>%
+  select(yyyy,item,value)
+
+eps <- apple%>% 
+  filter(category == "EPS") %>%
+  select(yyyy,item,value)
+
+bs <- apple%>% 
+  filter(category == "BS") %>%
+  select(yyyy,item,value)
+
+cf <- apple%>% 
+  filter(category == "CF") %>%
+  select(yyyy,item,value)
+
+oie <- apple%>% 
+  filter((category == "PL") & (item == "Interest and dividend income" | item == "Interest expense" | item == "Other income/(expense), net")) %>%
+  select(yyyy,item,value)
+
+oie_ttl <- apple%>% 
+  filter(category == "PL" & item == "Total other income/(expense), net") %>%
+  select(yyyy,value)
+
+due  <- apple%>% 
+  filter(category == "DUE" & item != "Total") %>%
+  select(yyyy,item,value)
+
+comprehensive_bd  <- apple%>% 
+  filter(category == "COMPREHENSIVE" & (item == "FX"|item == "derivative fair value"|item == "derivative adjustment"|item == "marketable fair value"|item == "marketable adjustment")) %>%
+  select(yyyy,item,value)
+
+comprehensive_sub  <- apple%>% 
+  filter(category == "COMPREHENSIVE" & (item == "FX"|item == "derivative total"|item == "marketable total")) %>%
+  select(yyyy,item,value)
+
+comprehensive  <- apple%>% 
+  filter(category == "COMPREHENSIVE" & (item == "Net income"|item == "Total comprehensive income")) %>%
+  select(yyyy,item,value)
+
+current_asset <- apple%>% 
+  filter(category == "ASSET_CURRENT" & item != "Total") %>%
+  select(yyyy,item,value)
+
+noncurrent_asset <- apple%>% 
+  filter(category == "ASSET_NON-CURRENT" & item != "Total") %>%
+  select(yyyy,item,value)
+
+current_liabilities <- apple%>% 
+  filter(category == "LIABILITIES_CURRENT" & item != "Total") %>%
+  select(yyyy,item,value)
+
+noncurrent_liabilities <- apple%>% 
+  filter(category == "LIABILITIES_NON-CURRENT" & item != "Total") %>%
+  select(yyyy,item,value)
+
+shareholders_equitiy <- apple%>% 
+  filter(category == "SHAREHOLDERS_EQUITIY") %>%
+  select(yyyy,item,value)
+
+asset_sub <- apple%>% 
+  filter((category == "ASSET_CURRENT"|category == "ASSET_NON-CURRENT") & item == "Total") %>%
+  select(yyyy,category,value)
+
+liabilities_sub <- apple%>% 
+  filter((category == "LIABILITIES_CURRENT"|category == "LIABILITIES_NON-CURRENT") & item == "Total") %>%
+  select(yyyy,category,value)
+
+lase <- apple%>% 
+  filter(category == "BS" & (item == "Total liabilities" | item == "Total shareholders' equity")) %>%
+  select(yyyy,item,value)
+
+common_stock <- apple%>% 
+  filter(category == "COMMON_STOCK" & !item %in% c("Beginning balances","Ending balances")) %>%
+  select(yyyy,item,value)
+
+retained_earnings <- apple%>% 
+  filter(category == "RETAINED_EARNINGS" & !item %in% c("Beginning balances","Ending balances")) %>%
+  select(yyyy,item,value)
+
+accumulated_oci <- apple%>% 
+  filter(category == "ACCUMULATED_OCI" & !item %in% c("Beginning balances","Ending balances")) %>%
+  select(yyyy,item,value)
+
+tse_bd <- apple%>% 
+  filter(item == "Ending balances") %>%
+  select(yyyy,category,value)
+
+cf_be <- apple%>% 
+  filter(category == "CF_TTL" & item != "Increase Decrease") %>%
+  select(yyyy,item,value)
+
+cf_id <- apple%>% 
+  filter(category == "CF_TTL" & item == "Increase Decrease") %>%
+  select(yyyy,item,value)
+
+cf_3 <- apple%>% 
+  filter(category %in% c("CF_OP","CF_IN","CF_FI") & item == "TTL") %>%
+  select(yyyy,category,value)
+
+cf_op <- apple%>% 
+  filter(category == "CF_OP" & item != "TTL") %>%
+  select(yyyy,item,value)
+
+cf_in <- apple%>% 
+  filter(category == "CF_IN" & item != "TTL") %>%
+  select(yyyy,item,value)
+
+cf_fi <- apple%>% 
+  filter(category == "CF_FI" & item != "TTL") %>%
+  select(yyyy,item,value)
+
+cf_be_20 <- cf_be %>%
+  filter(yyyy == 2020) %>%
+  select(yyyy,item,value)
+
+cf_3_20 <- cf_3 %>%
+  filter(yyyy == 2020) %>%
+  select(yyyy,category,value) %>%
+  rename(item = category)
+
+
+cf_wf_20 <- bind_rows(cf_be_20,cf_3_20)
+cf_wf_20 <- cf_wf_20 %>%
+  mutate(value2 = if_else(condition = item == "Ending", true = (value * -1)/1000 , false = value/1000))
+cf_levels <- c("Beginning", "CF_OP", "CF_IN", "CF_FI","Ending" )
+cf_wf_20 <- cf_wf_20 %>%
+  mutate(item2 = factor(item,levels = cf_levels)) %>%
+  arrange(item2)
+
+
+cf_data_20 <- cf_wf_20  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_wf_20$item2[1]), as.character(cf_wf_20$item2[nrow(cf_wf_20)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_be_19 <- cf_be %>%
+  filter(yyyy == 2019) %>%
+  select(yyyy,item,value)
+
+cf_3_19 <- cf_3 %>%
+  filter(yyyy == 2019) %>%
+  select(yyyy,category,value) %>%
+  rename(item = category)
+
+
+cf_wf_19 <- bind_rows(cf_be_19,cf_3_19)
+cf_wf_19 <- cf_wf_19 %>%
+  mutate(value2 = if_else(condition = item == "Ending", true = (value * -1)/1000 , false = value/1000))
+cf_wf_19 <- cf_wf_19 %>%
+  mutate(item2 = factor(item,levels = cf_levels)) %>%
+  arrange(item2)
+
+cf_data_19 <- cf_wf_19  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_wf_19$item2[1]), as.character(cf_wf_19$item2[nrow(cf_wf_19)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_be_18 <- cf_be %>%
+  filter(yyyy == 2018) %>%
+  select(yyyy,item,value)
+
+cf_3_18 <- cf_3 %>%
+  filter(yyyy == 2018) %>%
+  select(yyyy,category,value) %>%
+  rename(item = category)
+
+
+cf_wf_18 <- bind_rows(cf_be_18,cf_3_18)
+cf_wf_18 <- cf_wf_18 %>%
+  mutate(value2 = if_else(condition = item == "Ending", true = (value * -1)/1000 , false = value/1000))
+cf_wf_18 <- cf_wf_18 %>%
+  mutate(item2 = factor(item,levels = cf_levels)) %>%
+  arrange(item2)
+
+
+cf_data_18 <- cf_wf_18  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_wf_18$item2[1]), as.character(cf_wf_18$item2[nrow(cf_wf_18)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+# CF_OP Water Fall
+cf_op_20 <- apple%>% 
+  filter(category == "CF_OP" & yyyy == "2020") %>%
+  select(yyyy,item,value)
+
+cf_op_levels <- cf_op_20$item
+
+cf_op_20 <- cf_op_20 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_op_20 <- cf_op_20 %>%
+  mutate(item2 = factor(item,levels = cf_op_levels)) %>%
+  arrange(item2)
+
+cf_op_plot_20 <- cf_op_20  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_op_20$item2[nrow(cf_op_20)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_op_19 <- apple%>% 
+  filter(category == "CF_OP" & yyyy == "2019") %>%
+  select(yyyy,item,value)
+
+cf_op_levels <- cf_op_19$item
+
+cf_op_19 <- cf_op_19 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_op_19 <- cf_op_19 %>%
+  mutate(item2 = factor(item,levels = cf_op_levels)) %>%
+  arrange(item2)
+
+cf_op_plot_19 <- cf_op_19  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_op_19$item2[nrow(cf_op_19)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_op_18 <- apple%>% 
+  filter(category == "CF_OP" & yyyy == "2018") %>%
+  select(yyyy,item,value)
+
+cf_op_levels <- cf_op_18$item
+
+cf_op_18 <- cf_op_18 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_op_18 <- cf_op_18 %>%
+  mutate(item2 = factor(item,levels = cf_op_levels)) %>%
+  arrange(item2)
+
+cf_op_plot_18 <- cf_op_18  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_op_18$item2[nrow(cf_op_18)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_in_20 <- apple%>% 
+  filter(category == "CF_IN" & yyyy == "2020") %>%
+  select(yyyy,item,value)
+
+cf_in_levels <- cf_in_20$item
+
+cf_in_20 <- cf_in_20 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_in_20 <- cf_in_20 %>%
+  mutate(item2 = factor(item,levels = cf_in_levels)) %>%
+  arrange(item2)
+
+cf_in_plot_20 <- cf_in_20  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_in_20$item2[nrow(cf_in_20)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_in_19 <- apple%>% 
+  filter(category == "CF_IN" & yyyy == "2019") %>%
+  select(yyyy,item,value)
+
+cf_in_levels <- cf_in_19$item
+
+cf_in_19 <- cf_in_19 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_in_19 <- cf_in_19 %>%
+  mutate(item2 = factor(item,levels = cf_in_levels)) %>%
+  arrange(item2)
+
+cf_in_plot_19 <- cf_in_19  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c( as.character(cf_in_19$item2[nrow(cf_in_19)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_in_18 <- apple%>% 
+  filter(category == "CF_IN" & yyyy == "2018") %>%
+  select(yyyy,item,value)
+
+cf_in_levels <- cf_in_18$item
+
+cf_in_18 <- cf_in_18 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_in_18 <- cf_in_18 %>%
+  mutate(item2 = factor(item,levels = cf_in_levels)) %>%
+  arrange(item2)
+
+cf_in_plot_18 <- cf_in_18  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_in_18$item2[nrow(cf_in_18)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+
+cf_fi_20 <- apple%>% 
+  filter(category == "CF_FI" & yyyy == "2020") %>%
+  select(yyyy,item,value)
+
+cf_fi_levels <- cf_fi_20$item
+
+cf_fi_20 <- cf_fi_20 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_fi_20 <- cf_fi_20 %>%
+  mutate(item2 = factor(item,levels = cf_fi_levels)) %>%
+  arrange(item2)
+
+cf_fi_plot_20 <- cf_fi_20  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_fi_20$item2[nrow(cf_fi_20)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_fi_19 <- apple%>% 
+  filter(category == "CF_FI" & yyyy == "2019") %>%
+  select(yyyy,item,value)
+
+cf_fi_levels <- cf_fi_19$item
+
+cf_fi_19 <- cf_fi_19 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_fi_19 <- cf_fi_19 %>%
+  mutate(item2 = factor(item,levels = cf_fi_levels)) %>%
+  arrange(item2)
+
+cf_fi_plot_19 <- cf_fi_19  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_fi_19$item2[nrow(cf_fi_19)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf_fi_18 <- apple%>% 
+  filter(category == "CF_FI" & yyyy == "2018") %>%
+  select(yyyy,item,value)
+
+cf_fi_levels <- cf_fi_18$item
+
+cf_fi_18 <- cf_fi_18 %>%
+  mutate(value2 = if_else(condition = item == "TTL", true = (value * -1)/1000 , false = value/1000))
+
+cf_fi_18 <- cf_fi_18 %>%
+  mutate(item2 = factor(item,levels = cf_fi_levels)) %>%
+  arrange(item2)
+
+cf_fi_plot_18 <- cf_fi_18  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c(as.character(cf_fi_18$item2[nrow(cf_fi_18)])),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+### CF_SUPPLEMENT
+
+cf_su <- apple%>% 
+  filter(category == "CF_SUPPLEMENT") %>%
+  select(yyyy,item,value)
+
+### EPS # of shares
+shares <- apple%>% 
+  filter(category == "EPS" & item %in% c("Weighted-average basic shares outstanding","Effect of dilutive securities")) %>%
+  select(yyyy,item,value)
+
+#### Financial Instruments
+fi_2020 <- read.csv("~/Downloads/apple_fi_2020.csv")
+fi_2020_long <- fi_2020 %>%
+  pivot_longer(col = -category, names_to = "item", values_to = "value")
+yyyy <- rep(2020,times=nrow(fi_2020_long))
+fi_2020_long <- cbind(yyyy,fi_2020_long)
+
+fi_2019 <- read.csv("~/Downloads/apple_fi_2019.csv")
+fi_2019_long <- fi_2019 %>%
+  pivot_longer(col = -category, names_to = "item", values_to = "value")
+yyyy <- rep(2019,times=nrow(fi_2019_long))
+fi_2019_long <- cbind(yyyy,fi_2019_long)
+
+fi_long <- rbind(fi_2019_long,fi_2020_long)
+
+fi_fair <- fi_long %>%
+  filter(category != "TTL" & item == "Fair.Value") %>%
+  select(yyyy,category,value)
+
+fi_type <- fi_long %>%
+  filter(category != "TTL" & item %in% c("CCE","CMS","NMS") ) %>%
+  select(yyyy,category,item,value)
+
+fi_2020_TTL <- fi_long %>%
+  filter(yyyy == 2020 & category == "TTL") %>%
+  select(item,value)
+
+fi_2020_levels <- fi_2020_TTL$item
+
+fi_2020_TTL <- fi_2020_TTL %>%
+  mutate(value2 = if_else(condition = item == "Fair.Value", true = (value * -1)/1000 , false = value/1000))
+
+fi_2020_TTL <- fi_2020_TTL %>%
+  mutate(item2 = factor(item,levels = fi_2020_levels )) %>%
+  arrange(item2)
+
+fi_2020_TTL_plot <- fi_2020_TTL  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c("Fair.Value"),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+
+fi_2019_TTL <- fi_long %>%
+  filter(yyyy == 2019 & category == "TTL") %>%
+  select(item,value)
+
+fi_2019_levels <- fi_2019_TTL$item
+
+fi_2019_TTL <- fi_2019_TTL %>%
+  mutate(value2 = if_else(condition = item == "Fair.Value", true = (value * -1)/1000 , false = value/1000))
+
+fi_2019_TTL <- fi_2019_TTL %>%
+  mutate(item2 = factor(item,levels = fi_2019_levels )) %>%
+  arrange(item2)
+
+fi_2019_TTL_plot <- fi_2019_TTL  %>%
+  mutate(ymin = round(cumsum(value2), 3),
+         ymax = lag(cumsum(value2), default = 0),
+         xmin = c(head(item2, -1), NA),
+         xmax = c(tail(item2, -1), NA),
+         Impact = ifelse(item2 %in% c("Fair.Value"),"Balance",
+                         ifelse(value2 > 0, "Increase", "Decrease")
+         ))
+
+cf2 <- apple%>% 
+  filter(category == "CF2") %>%
+  select(yyyy,item,value)
+
+hi_2020 <- read.csv("~/Downloads/apple_hi_2020.csv")
+hi_2020_long <- hi_2020 %>%
+  pivot_longer(col = -category, names_to = "item", values_to = "value")
+yyyy <- rep(2020,times=nrow(hi_2020_long))
+hi_2020_long <- cbind(yyyy,hi_2020_long)
+
+hi_2019 <- read.csv("~/Downloads/apple_hi_2019.csv")
+hi_2019_long <- hi_2019 %>%
+  pivot_longer(col = -category, names_to = "item", values_to = "value")
+yyyy <- rep(2019,times=nrow(hi_2019_long))
+hi_2019_long <- cbind(yyyy,hi_2019_long)
+
+hi_long <- rbind(hi_2019_long,hi_2020_long)
+
+hi_long <- hi_long %>%
+  filter(item != "TTL") %>%
+  select(yyyy,category,item,value)
+
+### Balance Sheet2
+bs2_ttl <- apple %>%
+  filter(category == "BS2" & item == "TTL") %>%
+  select(yyyy,category,value)
+
+bs2_bd <- apple %>%
+  filter(category == "BS2" & item != "TTL") %>%
+  select(yyyy,item,value)
+
+### Derivative Instruments
+hg <- apple %>%
+  filter(category == "Hedged_Gain") %>%
+  select(yyyy,item,value)
+
+hc <- apple %>%
+  filter(category == "Hedged_Carrying") %>%
+  select(yyyy,item,value)
+
+hr_notional <- apple %>%
+  filter(category == "Hedged_Risk_Nortional") %>%
+  select(yyyy,item,value)
+
+hr_credit <- apple %>%
+  filter(category == "Hedged_Risk_Credit") %>%
+  select(yyyy,item,value)
+
+### PPE
+ppe <- apple %>%
+  filter(category == "PPE") %>%
+  select(yyyy,item,value)
+
+ppe_ysum <- ppe %>%
+  group_by(yyyy) %>%
+  summarise(TTL=sum(value))
+
+### Other Current Liability
+other_ocl <- apple %>%
+  filter(category == "Other-OCL") %>%
+  select(yyyy,item,value)
+
+other_ocl_ysum <- other_ocl %>%
+  group_by(yyyy) %>%
+  summarise(TTL=sum(value))
+
+### OI&E
+oie_bd <- apple %>%
+  filter(category == "OIE") %>%
+  select(yyyy,item,value)
+
+oie_ysum <- oie_bd %>%
+  group_by(yyyy) %>%
+  summarise(TTL=sum(value))
+
+### Tax
+tax <- apple %>%
+  filter(category == "Tax") %>%
+  select(yyyy,item,value)
+
+tax_fed <- apple %>%
+  filter(category == "Tax_Federal") %>%
+  select(yyyy,item,value)
+
+tax_st <- apple %>%
+  filter(category == "Tax_State") %>%
+  select(yyyy,item,value)
+
+tax_for <- apple %>%
+  filter(category == "Tax_Foreign") %>%
+  select(yyyy,item,value)
+
+effective_tax <- apple %>%
+  filter(category == "Effective_Tax" & item %in% c("Computed expected tax","Provision for income taxes")) %>%
+  select(yyyy,item,value)
+
+effective_tax_wide <- effective_tax %>%
+  pivot_wider(names_from = item, values_from = value) %>%
+  mutate(cp_rate = `Provision for income taxes`/`Computed expected tax`)
+
+effective_tax_bd <- apple %>%
+  filter(category == "Effective_Tax" & !item %in% c("Computed expected tax","Provision for income taxes")) %>%
+  select(yyyy,item,value)
+
+defferred_tax_balance <- apple %>%
+  filter(category == "DTB") %>%
+  select(yyyy,item,value)
+
+defferred_tax_asset <- apple %>%
+  filter(category == "DTA") %>%
+  select(yyyy,item,value)
+
+dta_levels <- defferred_tax_asset %>%
+  filter(yyyy == 2020) %>%
+  select(item)
+
+defferred_tax_asset <- defferred_tax_asset %>%
+  mutate(item2 = factor(item,levels = dta_levels$item)) %>%
+  arrange(item2)
+
+defferred_tax_liability <- apple %>%
+  filter(category == "DTL") %>%
+  select(yyyy,item,value)
+
+dtl_levels <- defferred_tax_liability %>%
+  filter(yyyy == 2020) %>%
+  select(item)
+
+defferred_tax_liability <- defferred_tax_liability %>%
+  mutate(item2 = factor(item,levels = dtl_levels$item)) %>%
+  arrange(item2)
+
+### Tax Balance
+tax_balance_wf_2020 <- balance_wf_plot(2020)
+tax_balance_wf_2019 <- balance_wf_plot(2019)
+tax_balance_wf_2018 <- balance_wf_plot(2018)
+```
+
+
+
+```{r, echo = FALSE, eval=TRUE, warning=FALSE,error=FALSE, message=FALSE,results='asis'}
+### Net Sales
+gg <- ggplot(pl_wide_new, aes(yyyy,`Total net sales`/1000)) + geom_bar(stat="identity")
+plot(gg)
+
+gg <- ggplot(pl_wide_new, aes(yyyy,ns_yoy)) + geom_bar(stat="identity")
+plot(gg)
+
+### Net Income
+gg <- ggplot(pl_wide_new, aes(yyyy,`Net income`)) + geom_bar(stat="identity")
+plot(gg)
+
+gg <- ggplot(pl_wide_new, aes(yyyy,ni_r)) + geom_bar(stat="identity")
+plot(gg)
+
+gg <- ggplot(pl_wide_new, aes(yyyy,ni_yoy)) + geom_bar(stat="identity")
+plot(gg)
+
+### Sales x Income
+gg <- ggplot(sales_income, aes(yyyy,value/1000,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+
+gg <- ggplot(pl_wide_new, aes(`Net income`/1000,`Total net sales`/1000,label = yyyy)) 
+gg <- gg + geom_point() + geom_text_repel()
+plot(gg)
+
+### EPS
+gg <- ggplot(eps, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(eps, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### Balance Sheet
+gg <- ggplot(bs, aes(yyyy,value/1000)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### Cash Flow
+gg <- ggplot(cf, aes(yyyy,value/1000)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### by Product
+gg <- ggplot(sales_product, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(sales_product, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(sales_product, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(sales_product, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### by Region
+gg <- ggplot(sales_region, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(sales_region, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(sales_region, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(sales_region, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### GM
+gg <- ggplot(gm, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(gm, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(gm, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(gm, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### GMP
+gg <- ggplot(gmp, aes(yyyy,value * 100,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(gmp, aes(yyyy,value * 100)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### Fixed Cost
+gg <- ggplot(fc, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(fc, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(fc, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(fc, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### Fixed Cost Percentage
+gg <- ggplot(fcp, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(fcp, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(fcp, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(fcp, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### OI&E
+gg <- ggplot(oie, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(oie, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+gg <- ggplot(oie_ttl, aes(yyyy,value)) + geom_bar(stat="identity")
+plot(gg)
+
+### Payment Due
+gg <- ggplot(due, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(due, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(due, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### Comprehensive
+gg <- ggplot(comprehensive_bd, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(comprehensive_bd, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(comprehensive_sub, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(comprehensive_sub, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(comprehensive, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(comprehensive, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### ASSETS
+gg <- ggplot(current_asset, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(current_asset, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(current_asset, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(current_asset, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(noncurrent_asset, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(noncurrent_asset, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(noncurrent_asset, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(noncurrent_asset, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### LIABILITIES
+gg <- ggplot(current_liabilities, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(current_liabilities, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(current_liabilities, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(current_liabilities, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(noncurrent_liabilities, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(noncurrent_liabilities, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(noncurrent_liabilities, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(noncurrent_liabilities, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+#### Sharelder's Equity
+gg <- ggplot(shareholders_equitiy, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(shareholders_equitiy, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(shareholders_equitiy, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(shareholders_equitiy, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### ASSET Sub TTL
+gg <- ggplot(asset_sub, aes(yyyy,value,fill=category)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(asset_sub, aes(yyyy,value,fill=category)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(asset_sub, aes(yyyy,value,fill=category)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(asset_sub, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~category)
+plot(gg)
+
+### LIABLITIES Sub TTL
+gg <- ggplot(liabilities_sub, aes(yyyy,value,fill=category)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(liabilities_sub, aes(yyyy,value,fill=category)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(liabilities_sub, aes(yyyy,value,fill=category)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(liabilities_sub, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~category)
+plot(gg)
+
+### Liabilities & Shareholder's equity
+gg <- ggplot(lase, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(lase, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(lase, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(lase, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+### TSE
+gg <- ggplot(common_stock, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(common_stock, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(retained_earnings, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(retained_earnings, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(accumulated_oci, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(accumulated_oci, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(tse_bd, aes(yyyy,value,fill=category)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(tse_bd, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~category)
+plot(gg)
+
+gg <- ggplot(cf_be, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+
+gg <- ggplot(cf_id, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+
+gg <- ggplot(cf_3, aes(yyyy,value,fill=category)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(cf_3, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~category)
+plot(gg)
+
+gg <- ggplot(cf_op, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(cf_in, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+gg <- ggplot(cf_fi, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+g <- ggplot(cf_data_20) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "CF Category", title = "2020 Explanation of CF")
+
+w <- 0.4  #use to set width of bars
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+
+
+g <- g +
+  geom_segment(data = cf_data_20[1:(nrow(cf_data_20) -1),],aes(x = xmin,
+                                                     xend = xmax,
+                                                     y = ymin,
+                                                     yend = ymin))
+
+plot(g)
+
+g <- ggplot(cf_data_19) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "CF Category", title = "2019 Explanation of CF")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+
+
+g <- g +
+  geom_segment(data = cf_data_19[1:(nrow(cf_data_19) -1),],aes(x = xmin,
+                                                         xend = xmax,
+                                                         y = ymin,
+                                                         yend = ymin))
+
+plot(g)
+
+g <- ggplot(cf_data_18) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "CF Category", title = "2018 Explanation of CF")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_data_18[1:(nrow(cf_data_18) -1),],aes(x = xmin,
+                                                         xend = xmax,
+                                                         y = ymin,
+                                                         yend = ymin))
+
+plot(g)
+
+### CF_OP_WF
+g <- ggplot(cf_op_plot_20) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2020 CF_Operation")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_op_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_op_plot_20[1:(nrow(cf_op_plot_20) -1),],aes(x = xmin,
+                                                               xend = xmax,
+                                                               y = ymin,
+                                                               yend = ymin))
+
+plot(g) 
+
+g <- ggplot(cf_op_plot_19) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2019 CF_Operation")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_op_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_op_plot_19[1:(nrow(cf_op_plot_19) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g)
+
+g <- ggplot(cf_op_plot_18) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2018 CF_Operation")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_op_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_op_plot_18[1:(nrow(cf_op_plot_18) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g)
+
+g <- ggplot(cf_in_plot_20) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2020 CF_Investment")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_in_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_in_plot_20[1:(nrow(cf_in_plot_20) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g) 
+
+g <- ggplot(cf_in_plot_19) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2019 CF_Investment")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_in_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_in_plot_19[1:(nrow(cf_in_plot_19) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g)
+
+g <- ggplot(cf_in_plot_18) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2018 CF_Investment")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_in_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_in_plot_18[1:(nrow(cf_in_plot_18) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g)
+
+g <- ggplot(cf_fi_plot_20) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2020 CF_Finance")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_fi_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_fi_plot_20[1:(nrow(cf_fi_plot_20) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g) 
+
+g <- ggplot(cf_fi_plot_19) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2019 CF_Finance")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_fi_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_fi_plot_19[1:(nrow(cf_fi_plot_19) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g) 
+
+g <- ggplot(cf_fi_plot_18) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2018 CF_Finance")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = cf_fi_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = cf_fi_plot_18[1:(nrow(cf_fi_plot_18) -1),],aes(x = xmin,
+                                                                     xend = xmax,
+                                                                     y = ymin,
+                                                                     yend = ymin))
+
+plot(g) 
+
+gg <- ggplot(cf_su, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(cf_su, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(cf_su, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+# number of shares
+gg <- ggplot(shares, aes(yyyy,value,fill=item)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(shares, aes(yyyy,value,fill=item)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+gg <- ggplot(shares, aes(yyyy,value)) + geom_bar(stat="identity") + facet_wrap(~item)
+plot(gg)
+
+# Financial Instruments
+gg <- ggplot(fi_fair, aes(yyyy,value,fill=category)) + geom_bar(stat="identity")
+plot(gg)
+gg <- ggplot(fi_fair, aes(yyyy,value,fill=category)) + geom_bar(stat = "identity", position = "fill") + scale_y_continuous(labels = scales::percent)
+plot(gg)
+gg <- ggplot(fi_fair, aes(yyyy,value,fill=category)) + geom_bar(position="dodge",stat="identity")
+plot(gg)
+
+gg <- ggplot(fi_type, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") + facet_wrap(~category)
+plot(gg)
+
+g <- ggplot(fi_2020_TTL_plot) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2020 Financial Instruments:TTL")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = fi_2020_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = fi_2020_TTL_plot[1:(nrow(fi_2020_TTL_plot) -1),],aes(x = xmin,
+                                                                           xend = xmax,
+                                                                           y = ymin,
+                                                                           yend = ymin))
+
+plot(g) 
+
+g <- ggplot(fi_2019_TTL_plot) +
+  theme_bw()+
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Billions", x = "CF Category", title = "2019 Financial Instruments:TTL")
+
+g <- g +
+  geom_rect(aes(xmin = as.integer(item2) - w/2,
+                xmax = as.integer(item2) + w/2, ymin = ymin, ymax = ymax,
+                fill = Impact), colour = "black") +
+  scale_x_discrete(limits = fi_2019_levels) +
+  scale_fill_manual(values = (c("Decrease" = "blue", "Increase" = "orange", "Balance" = "black")))
+
+g <- g +
+  geom_segment(data = fi_2019_TTL_plot[1:(nrow(fi_2019_TTL_plot) -1),],aes(x = xmin,
+                                                                           xend = xmax,
+                                                                           y = ymin,
+                                                                           yend = ymin))
+
+plot(g) 
+
+### CF2
+gg <- ggplot(cf2, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") + 
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "CF2 Break Down")
+
+plot(gg)
+gg <- ggplot(cf2, aes(yyyy,value,fill=item)) + geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "Share", x = "Year", title = "CF2 Break Down")
+plot(gg)
+
+### Hedge Instrument
+gg <- ggplot(hi_long, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") + 
+  facet_wrap(~category) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Hedge Instrument Break Down")
+plot(gg)
+
+### Balance Sheet2
+gg <- ggplot(bs2_ttl, aes(yyyy,value)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Balance Sheet2 TTL")
+plot(gg)
+
+gg <- ggplot(bs2_bd, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Balance Sheet2 Break Down")
+plot(gg)
+
+gg <- ggplot(bs2_bd, aes(yyyy,value)) + geom_bar(stat="identity") +
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Balance Sheet2 Break Down")
+plot(gg)
+
+gg <- ggplot(hg, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Hedged Gain")
+plot(gg)
+
+gg <- ggplot(hg, aes(yyyy,value)) + geom_bar(stat="identity") +
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Hedged Gain")
+plot(gg)
+
+gg <- ggplot(hc, aes(item,value)) + geom_bar(stat="identity") +
+  facet_wrap(~yyyy) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Item", title = "Carrying Amount")
+plot(gg)
+
+gg <- ggplot(hr_notional, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Hendged Notional Risk")
+plot(gg)
+
+gg <- ggplot(hr_credit, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Hendged Credit Risk")
+plot(gg)
+
+ppe_ysum <- ppe %>%
+  group_by(yyyy) %>%
+  summarise(TTL=sum(value))
+
+gg <- ggplot(ppe_ysum, aes(yyyy,TTL)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Property, Plant and Equipment, Net")
+plot(gg)
+
+gg <- ggplot(ppe, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Property, Plant and Equipment, Net")
+plot(gg)
+
+gg <- ggplot(other_ocl_ysum, aes(yyyy,TTL)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Other Non-Current Liabilities")
+plot(gg)
+
+gg <- ggplot(other_ocl, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Other Non-Current Liabilities")
+plot(gg)
+
+gg <- ggplot(oie_ysum, aes(yyyy,TTL)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Other Income/(Expense), Net")
+plot(gg)
+
+gg <- ggplot(oie_bd, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Other Income/(Expense), Net")
+plot(gg)
+
+### Tax
+gg <- ggplot(tax, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Tax")
+plot(gg)
+
+
+gg <- ggplot(tax, aes(yyyy,value,fill=item)) + 
+  geom_bar(stat = "identity", position = "fill") + 
+  scale_y_continuous(labels = scales::percent) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "Share", x = "Year", title = "Tax")
+plot(gg)
+
+gg <- ggplot(tax, aes(yyyy,value,fill=item)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Tax")
+plot(gg)
+
+gg <- ggplot(tax, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Tax")
+plot(gg)
+
+gg <- ggplot(tax_fed, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Federal Tax")
+plot(gg)
+
+gg <- ggplot(tax_fed, aes(yyyy,value,fill=item)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Federal Tax")
+plot(gg)
+
+gg <- ggplot(tax_fed, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Federal Tax")
+plot(gg)
+
+gg <- ggplot(tax_st, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "State Tax")
+plot(gg)
+
+gg <- ggplot(tax_st, aes(yyyy,value,fill=item)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "State Tax")
+plot(gg)
+
+gg <- ggplot(tax_st, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "State Tax")
+plot(gg)
+
+gg <- ggplot(tax_for, aes(yyyy,value,fill=item)) + geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Millions", x = "Year", title = "Foreign Tax")
+plot(gg)
+
+gg <- ggplot(tax_for, aes(yyyy,value,fill=item)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Foreign Tax")
+plot(gg)
+
+gg <- ggplot(tax_for, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Foreign Tax")
+plot(gg)
+
+gg <- ggplot(effective_tax, aes(yyyy,value,fill=item)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Effective Tax")
+plot(gg)
+
+gg <- ggplot(effective_tax, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Effective Tax")
+plot(gg)
+
+gg <- ggplot(effective_tax_wide, aes(yyyy,cp_rate*100)) + 
+  geom_bar(stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "Provision Rate", x = "Year", title = "Effective Tax Rate")
+plot(gg)
+
+gg <- ggplot(effective_tax_bd, aes(yyyy,value,fill=item)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Effective Tax")
+plot(gg)
+
+gg <- ggplot(effective_tax_bd, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Effective Tax")
+plot(gg)
+
+gg <- ggplot(defferred_tax_balance, aes(yyyy,value,fill=item)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Defferred Tax Balance")
+plot(gg)
+
+gg <- ggplot(defferred_tax_balance, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Defferred Tax Balance")
+plot(gg)
+
+gg <- ggplot(defferred_tax_asset, aes(yyyy,value,fill=item2)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Defferred Tax Assets")
+plot(gg)
+
+gg <- ggplot(defferred_tax_asset, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item2) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Defferred Tax Assets")
+plot(gg)
+
+gg <- ggplot(defferred_tax_liability, aes(yyyy,value,fill=item2)) + 
+  geom_bar(position="dodge",stat="identity") +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Defferred Tax Liabilities")
+plot(gg)
+
+gg <- ggplot(defferred_tax_liability, aes(yyyy,value)) + geom_bar(stat="identity") + 
+  facet_wrap(~item2) +
+  theme_bw() +
+  theme(legend.position = "right", panel.grid = element_blank(), 
+        axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+  labs(y = "USD Million", x = "Year", title = "Defferred TaxLiabilities")
+plot(gg)
+
+### Tax Balance
+plot(tax_balance_wf_2020)
+plot(tax_balance_wf_2019)
+plot(tax_balance_wf_2018)
+```
