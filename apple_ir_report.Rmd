@@ -675,6 +675,19 @@ defferred_tax_liability <- defferred_tax_liability %>%
 tax_balance_wf_2020 <- balance_wf_plot(2020)
 tax_balance_wf_2019 <- balance_wf_plot(2019)
 tax_balance_wf_2018 <- balance_wf_plot(2018)
+### CP
+g_cp_2020 <- balance_plot("CP",2020)
+g_cp_2019 <- balance_plot("CP",2019)
+g_cp_2018 <- balance_plot("CP",2018)
+g_facet_cp <- facet_plot("CP")
+### Term Debt
+g_termdebt_2020 <- balance_termdebt_plot("Term_Debt",2020)
+g_termdebt_2019 <- balance_termdebt_plot("Term_Debt",2019)
+g_facet_td <- facet_plot("TD_BD")
+g_fill_td <- fill_bar_plot("TD_BD")
+g_facet_td_maturity <- facet_trans_plot("TD_Maturity")
+g_fill_td_maturity <- fill_bar_plot("TD_Maturity")
+
 ```
 
 
@@ -1579,4 +1592,18 @@ plot(gg)
 plot(tax_balance_wf_2020)
 plot(tax_balance_wf_2019)
 plot(tax_balance_wf_2018)
+
+### CP
+plot(g_cp_2020)
+plot(g_cp_2019)
+plot(g_cp_2018)
+plot(g_facet_cp)
+
+### Term Debt
+plot(g_fill_td)
+plot(g_facet_td)
+plot(g_termdebt_2020)
+plot(g_termdebt_2019)
+plot(g_facet_td_maturity)
+plot(g_fill_td_maturity)
 ```
