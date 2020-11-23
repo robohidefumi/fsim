@@ -693,6 +693,10 @@ g_cs_2019 <- balance_wf_plot2("Common_Stock",2019,"Stocks Outstanding")
 g_cs_2018 <- balance_wf_plot2("Common_Stock",2018,"Stocks Outstanding")
 g_cs_facet <- facet_yyyy_plot("Common_Stock",c("Beginning"),"Stocks Outstanding")
 
+### Comprehensive_Income
+g_ci_facet <- facet_yyyy_plot("Comprehensive_Income",c(""),"Comprehensive Income")
+g_ci_TTL   <- yyyy_ttl_plot("Comprehensive_Income",c(""),"Comprehensive Income")
+
 ```
 
 
@@ -1617,4 +1621,8 @@ plot(g_cs_2020)
 plot(g_cs_2019)
 plot(g_cs_2018)
 plot(g_cs_facet)
+
+### Comprehensive Income
+plot(g_ci_facet)
+plot(g_ci_TTL)
 ```

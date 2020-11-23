@@ -237,11 +237,39 @@ balance_wf_plot2 <- function(category_v, yyyy_v, y_title){
 facet_yyyy_plot <- function(category_v,exclude_v,y_title){
   
   df <- apple%>% 
-    filter(category == "Common_Stock" & !item %in% exclude_v) %>%
+    filter(category == category_v & !item %in% exclude_v) %>%
     select(yyyy,item,value)
   
   g <- ggplot(df, aes(yyyy,value)) + geom_bar(stat="identity") + 
     facet_wrap(~item) +
+    theme_bw() +
+    theme(legend.position = "right", panel.grid = element_blank(), 
+          axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+    labs(y = y_title, x = "Year", title = category_v)
+  
+  return(g)
+}
+
+yyyy_wide <- function(df_wide, category_v){
+  
+  df_long <- df_wide %>%
+    pivot_longer(col = -item, names_to = "y_code", values_to = "value") %>%
+    mutate(yyyy = as.integer(sub("X","",y_code))) %>%
+    mutate(category = category_v) %>%
+    select(yyyy,category,item,value)
+  
+  return(df_long)
+  
+}
+
+yyyy_ttl_plot <- function(category_v,exclude_v,y_title){
+  
+  df <- apple%>% 
+    filter(category == category_v & !item %in% exclude_v) %>%
+    group_by(yyyy) %>%
+    summarise(TTL=sum(value))
+  
+  g <- ggplot(df, aes(yyyy,TTL)) + geom_bar(stat="identity") + 
     theme_bw() +
     theme(legend.position = "right", panel.grid = element_blank(), 
           axis.text.x = element_text(angle = 90, vjust = 0.5)) +
