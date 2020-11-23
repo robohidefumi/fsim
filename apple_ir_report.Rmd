@@ -687,6 +687,11 @@ g_facet_td <- facet_plot("TD_BD")
 g_fill_td <- fill_bar_plot("TD_BD")
 g_facet_td_maturity <- facet_trans_plot("TD_Maturity")
 g_fill_td_maturity <- fill_bar_plot("TD_Maturity")
+### Common Stock Outstanding
+g_cs_2020 <- balance_wf_plot2("Common_Stock",2020,"Stocks Outstanding")
+g_cs_2019 <- balance_wf_plot2("Common_Stock",2019,"Stocks Outstanding")
+g_cs_2018 <- balance_wf_plot2("Common_Stock",2018,"Stocks Outstanding")
+g_cs_facet <- facet_yyyy_plot("Common_Stock",c("Beginning"),"Stocks Outstanding")
 
 ```
 
@@ -1606,4 +1611,10 @@ plot(g_termdebt_2020)
 plot(g_termdebt_2019)
 plot(g_facet_td_maturity)
 plot(g_fill_td_maturity)
+
+### Common Stock Outstanding
+plot(g_cs_2020)
+plot(g_cs_2019)
+plot(g_cs_2018)
+plot(g_cs_facet)
 ```
